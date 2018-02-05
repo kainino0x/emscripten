@@ -2213,7 +2213,7 @@ function integrateWasmJS() {
       // Keep a reference to the compiled module so we can post it to the workers.
       Module['wasmModule'] = module;
       // Instantiation is synchronous in pthreads and we assert on run dependencies.
-      if(!ENVIRONMENT_IS_PTHREAD) removeRunDependency('wasm-instantiate');
+      if (!ENVIRONMENT_IS_PTHREAD) removeRunDependency('wasm-instantiate');
 #else
       removeRunDependency('wasm-instantiate');
 #endif
@@ -2285,8 +2285,10 @@ function integrateWasmJS() {
     return {}; // no exports yet; we'll fill them in later
 #else
     var instance;
+    var module;
     try {
-      instance = new WebAssembly.Instance(new WebAssembly.Module(getBinary()), info)
+      module = new WebAssembly.Module(getBinary());
+      instance = new WebAssembly.Instance(module, info)
     } catch (e) {
       err('failed to compile wasm module: ' + e);
       if (e.toString().indexOf('imported Memory with incompatible size') >= 0) {
@@ -2294,7 +2296,7 @@ function integrateWasmJS() {
       }
       return false;
     }
-    receiveInstance(instance);
+    receiveInstance(instance, module);
     return exports;
 #endif
   }
