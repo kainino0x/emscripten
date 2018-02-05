@@ -2,6 +2,18 @@
 #define __emscripten_events_h__
 
 #ifdef __cplusplus
+#if !defined(__DEFINED_pthread_t)
+typedef unsigned long pthread_t;
+#define __DEFINED_pthread_t
+#endif
+#else
+#if !defined(__DEFINED_pthread_t)
+typedef struct __pthread * pthread_t;
+#define __DEFINED_pthread_t
+#endif
+#endif
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -414,6 +426,7 @@ typedef struct EmscriptenWebGLContextAttributes {
 
   EM_BOOL enableExtensionsByDefault;
   EM_BOOL explicitSwapControl;
+  EM_BOOL renderViaOffscreenBackBuffer;
 } EmscriptenWebGLContextAttributes;
 
 extern void emscripten_webgl_init_context_attributes(EmscriptenWebGLContextAttributes *attributes);
@@ -443,6 +456,9 @@ extern EMSCRIPTEN_RESULT emscripten_get_canvas_element_size(const char *target, 
 
 extern EMSCRIPTEN_RESULT emscripten_set_element_css_size(const char *target, double width, double height);
 extern EMSCRIPTEN_RESULT emscripten_get_element_css_size(const char *target, double *width, double *height);
+
+#define EM_CALLBACK_THREAD_CONTEXT_MAIN_BROWSER_THREAD ((pthread_t)0x1)
+#define EM_CALLBACK_THREAD_CONTEXT_CALLING_THREAD ((pthread_t)0x2)
 
 #ifdef __cplusplus
 } // ~extern "C"
