@@ -60,24 +60,35 @@ var LibraryJSEvents = {
       }
     },
 
+    // Find a DOM element with the given ID.
     findEventTarget: function(target) {
-      if (target) {
-        if (typeof target == "number") {
-          target = Pointer_stringify(target);
-        }
-        if (target == '#window') return window;
-        else if (target == '#document') return document;
-        else if (target == '#screen') return window.screen;
-        else if (target == '#canvas') return Module['canvas'];
-
-        if (typeof target == 'string') return document.getElementById(target);
-        else return target;
-      } else {
-        // The sensible target varies between events, but use window as the default
+      try {
+        // The sensible "default" target varies between events, but use window as the default
         // since DOM events mostly can default to that. Specific callback registrations
         // override their own defaults.
-        return window;
+        if (!target) return window;
+        if (typeof target === "number") target = Pointer_stringify(target);
+        if (target === '#window') return window;
+        else if (target === '#document') return document;
+        else if (target === '#screen') return window.screen;
+        else if (target === '#canvas') return Module['canvas'];
+        return (typeof target === 'string') ? document.getElementById(target) : target;
+      } catch(e) {
+        // In Web Workers, some objects above, such as '#document' do not exist. Gracefully
+        // return null for them.
+        return null;
       }
+    },
+
+    // Like findEventTarget, but looks for OffscreenCanvas elements first
+    findCanvasEventTarget: function(target) {
+      if (typeof target === 'number') target = Pointer_stringify(target);
+      if (!target || target === '#canvas') {
+        if (typeof GL !== 'undefined' && GL.offscreenCanvases['canvas']) return GL.offscreenCanvases['canvas']; // TODO: Remove this line, target '#canvas' should refer only to Module['canvas'], not to GL.offscreenCanvases['canvas'] - but need stricter tests to be able to remove this line.
+        return Module['canvas'];
+      }
+      if (typeof GL !== 'undefined' && GL.offscreenCanvases[target]) return GL.offscreenCanvases[target];
+      return JSEvents.findEventTarget(target);
     },
 
     deferredCalls: [],
@@ -631,8 +642,9 @@ var LibraryJSEvents = {
       var rect = target.getBoundingClientRect();
       var windowedCssWidth = rect.right - rect.left;
       var windowedCssHeight = rect.bottom - rect.top;
-      var windowedRttWidth = target.width;
-      var windowedRttHeight = target.height;
+      var canvasSize = emscripten_get_canvas_element_size_js(target.id);
+      var windowedRttWidth = canvasSize[0];
+      var windowedRttHeight = canvasSize[1];
 
       if (strategy.scaleMode == {{{ cDefine('EMSCRIPTEN_FULLSCREEN_SCALE_CENTER') }}}) {
         __setLetterbox(target, (cssHeight - windowedCssHeight) / 2, (cssWidth - windowedCssWidth) / 2);
@@ -672,9 +684,16 @@ var LibraryJSEvents = {
 
       var dpiScale = (strategy.canvasResolutionScaleMode == {{{ cDefine('EMSCRIPTEN_FULLSCREEN_CANVAS_SCALE_HIDEF') }}}) ? window.devicePixelRatio : 1;
       if (strategy.canvasResolutionScaleMode != {{{ cDefine('EMSCRIPTEN_FULLSCREEN_CANVAS_SCALE_NONE') }}}) {
-        target.width = cssWidth * dpiScale;
-        target.height = cssHeight * dpiScale;
-        if (target.GLctxObject) target.GLctxObject.GLctx.viewport(0, 0, target.width, target.height);
+        var newWidth = (cssWidth * dpiScale)|0;
+        var newHeight = (cssHeight * dpiScale)|0;
+
+        if (!target.controlTransferredOffscreen) {
+          target.width = newWidth;
+          target.height = newHeight;
+        } else {
+          emscripten_set_canvas_element_size_js(target.id, newWidth, newHeight);
+        }
+        if (target.GLctxObject) target.GLctxObject.GLctx.viewport(0, 0, newWidth, newHeight);
       }
       return restoreOldStyle;
     },
@@ -1277,8 +1296,9 @@ var LibraryJSEvents = {
   },
 
   _registerRestoreOldStyle: function(canvas) {
-    var oldWidth = canvas.width;
-    var oldHeight = canvas.height;
+    var canvasSize = emscripten_get_canvas_element_size_js(canvas.id);
+    var oldWidth = canvasSize[0];
+    var oldHeight = canvasSize[1];
     var oldCssWidth = canvas.style.width;
     var oldCssHeight = canvas.style.height;
     var oldBackgroundColor = canvas.style.backgroundColor; // Chrome reads color from here.
@@ -1305,8 +1325,13 @@ var LibraryJSEvents = {
         document.removeEventListener('webkitfullscreenchange', restoreOldStyle);
         document.removeEventListener('MSFullscreenChange', restoreOldStyle);
 
-        canvas.width = oldWidth;
-        canvas.height = oldHeight;
+        if (!canvas.controlTransferredOffscreen) {
+          canvas.width = oldWidth;
+          canvas.height = oldHeight;
+        } else {
+          emscripten_set_canvas_element_size_js(canvas.id, oldWidth, oldHeight);
+        }
+
         canvas.style.width = oldCssWidth;
         canvas.style.height = oldCssHeight;
         canvas.style.backgroundColor = oldBackgroundColor; // Chrome
@@ -1402,8 +1427,9 @@ var LibraryJSEvents = {
     var w = screenWidth;
     var h = screenHeight;
     var canvas = __currentFullscreenStrategy.target;
-    var x = canvas.width;
-    var y = canvas.height;
+    var canvasSize = emscripten_get_canvas_element_size_js(canvas.id);
+    var x = canvasSize[0];
+    var y = canvasSize[1];
     var topMargin;
 
     if (inAspectRatioFixedFullscreenMode) {
@@ -1413,9 +1439,13 @@ var LibraryJSEvents = {
     }
 
     if (inPixelPerfectFullscreenMode) {
-      canvas.width = w;
-      canvas.height = h;
-      if (canvas.GLctxObject) canvas.GLctxObject.GLctx.viewport(0, 0, canvas.width, canvas.height);
+      if (!canvas.controlTransferredOffscreen) {
+        canvas.width = w;
+        canvas.height = h;
+      } else {
+        emscripten_set_canvas_element_size_js(canvas.id, w, h);
+      }
+      if (canvas.GLctxObject) canvas.GLctxObject.GLctx.viewport(0, 0, w, h);
     }
 
     // Back to CSS pixels.
@@ -1797,10 +1827,19 @@ var LibraryJSEvents = {
     {{{ makeSetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.minorVersion, 0, 'i32') }}};
     {{{ makeSetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.enableExtensionsByDefault, 1, 'i32') }}};
     {{{ makeSetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.explicitSwapControl, 0, 'i32') }}};
+    {{{ makeSetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.proxyContextToMainThread, 1, 'i32') }}};
+    {{{ makeSetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.renderViaOffscreenBackBuffer, 0, 'i32') }}};
   },
 
-  emscripten_webgl_create_context__deps: ['$GL'],
-  emscripten_webgl_create_context: function(target, attributes) {
+#if !USE_PTHREADS
+  emscripten_webgl_create_context: 'emscripten_webgl_do_create_context',
+  emscripten_webgl_get_current_context: 'emscripten_webgl_do_get_current_context',
+  emscripten_webgl_commit_frame: 'emscripten_webgl_do_commit_frame',
+#endif
+
+  emscripten_webgl_do_create_context__deps: ['$GL'],
+  // This function performs proxying manually, depending on the style of context that is to be created.
+  emscripten_webgl_do_create_context: function(target, attributes) {
     var contextAttributes = {};
     contextAttributes['alpha'] = !!{{{ makeGetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.alpha, 'i32') }}};
     contextAttributes['depth'] = !!{{{ makeGetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.depth, 'i32') }}};
@@ -1814,21 +1853,53 @@ var LibraryJSEvents = {
     contextAttributes['minorVersion'] = {{{ makeGetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.minorVersion, 'i32') }}};
     var enableExtensionsByDefault = {{{ makeGetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.enableExtensionsByDefault, 'i32') }}};
     contextAttributes['explicitSwapControl'] = {{{ makeGetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.explicitSwapControl, 'i32') }}};
+    contextAttributes['proxyContextToMainThread'] = {{{ makeGetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.proxyContextToMainThread, 'i32') }}};
+    contextAttributes['renderViaOffscreenBackBuffer'] = {{{ makeGetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.renderViaOffscreenBackBuffer, 'i32') }}};
 
     target = Pointer_stringify(target);
     var canvas;
     if ((!target || target === '#canvas') && Module['canvas']) {
-      canvas = Module['canvas'].id ? (GL.offscreenCanvases[Module['canvas'].id] || JSEvents.findEventTarget(Module['canvas'].id)) : Module['canvas'];
+      canvas = (Module['canvas'].id && GL.offscreenCanvases[Module['canvas'].id]) ? (GL.offscreenCanvases[Module['canvas'].id].offscreenCanvas || JSEvents.findEventTarget(Module['canvas'].id)) : Module['canvas'];
     } else {
-      canvas = GL.offscreenCanvases[target] || JSEvents.findEventTarget(target);
+      canvas = GL.offscreenCanvases[target] ? GL.offscreenCanvases[target].offscreenCanvas : JSEvents.findEventTarget(target);
     }
+
+#if USE_PTHREADS
+    // Create a WebGL context that is proxied to main thread if canvas was not found on worker, or if explicitly requested to do so.
+    if (ENVIRONMENT_IS_PTHREAD) {
+      if (contextAttributes['proxyContextToMainThread'] === {{{ cDefine('EMSCRIPTEN_WEBGL_CONTEXT_PROXY_ALWAYS') }}} ||
+         (!canvas && contextAttributes['proxyContextToMainThread'] === {{{ cDefine('EMSCRIPTEN_WEBGL_CONTEXT_PROXY_FALLBACK') }}})) {
+        // When WebGL context is being proxied via the main thread, we must render using an offscreen FBO render target to avoid WebGL's
+        // "implicit swap when callback exits" behavior. TODO: If OffscreenCanvas is supported, explicitSwapControl=true and still proxying,
+        // then this can be avoided, since OffscreenCanvas enables explicit swap control.
+#if GL_DEBUG
+        if (contextAttributes['proxyContextToMainThread'] === {{{ cDefine('EMSCRIPTEN_WEBGL_CONTEXT_PROXY_ALWAYS') }}}) console.error('EMSCRIPTEN_WEBGL_CONTEXT_PROXY_ALWAYS enabled, proxying WebGL rendering from pthread to main thread.');
+        if (!canvas && contextAttributes['proxyContextToMainThread'] === {{{ cDefine('EMSCRIPTEN_WEBGL_CONTEXT_PROXY_FALLBACK') }}}) console.error('Specified canvas target "' + target + '" is not an OffscreenCanvas in the current pthread, but EMSCRIPTEN_WEBGL_CONTEXT_PROXY_FALLBACK is set. Proxying WebGL rendering from pthread to main thread.');
+        console.error('Performance warning: forcing renderViaOffscreenBackBuffer=true and preserveDrawingBuffer=true since proxying WebGL rendering.');
+#endif
+        // We will be proxying - if OffscreenCanvas is supported, we can proxy a bit more efficiently by avoiding having to create an Offscreen FBO.
+        if (typeof OffscreenCanvas === 'undefined') {
+          {{{ makeSetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.renderViaOffscreenBackBuffer, '1', 'i32') }}}
+          {{{ makeSetValue('attributes', C_STRUCTS.EmscriptenWebGLContextAttributes.preserveDrawingBuffer, '1', 'i32') }}}
+        }
+        return _emscripten_sync_run_in_main_thread_2({{{ cDefine('EM_PROXIED_CREATE_CONTEXT') }}}, target, attributes);
+      }
+    }
+#endif
+
     if (!canvas) {
 #if GL_DEBUG
-      console.error('emscripten_webgl_create_context failed: Unknown target!');
+      console.error('emscripten_webgl_create_context failed: Unknown canvas target "' + target + '"!');
 #endif
       return 0;
     }
+
 #if OFFSCREENCANVAS_SUPPORT
+#if GL_DEBUG
+    if (typeof OffscreenCanvas !== 'undefined' && canvas instanceof OffscreenCanvas) console.log('emscripten_webgl_create_context: Creating an OffscreenCanvas-based WebGL context on target "' + target + '"');
+    else if (typeof HTMLCanvasElement !== 'undefined' && canvas instanceof HTMLCanvasElement) console.log('emscripten_webgl_create_context: Creating an HTMLCanvasElement-based WebGL context on target "' + target + '"');
+#endif
+
     if (contextAttributes['explicitSwapControl']) {
       var supportsOffscreenCanvas = canvas.transferControlToOffscreen || (typeof OffscreenCanvas !== 'undefined' && canvas instanceof OffscreenCanvas);
       if (!supportsOffscreenCanvas) {
@@ -1838,12 +1909,22 @@ var LibraryJSEvents = {
         return 0;
       }
       if (canvas.transferControlToOffscreen) {
-        GL.offscreenCanvases[canvas.id] = canvas.transferControlToOffscreen();
-        GL.offscreenCanvases[canvas.id].id = canvas.id;
+#if GL_DEBUG
+        console.log('explicitSwapControl requested: canvas.transferControlToOffscreen() on canvas "' + target + '" to get .commit() function and not rely on implicit WebGL swap');
+#endif
+        if (!canvas.controlTransferredOffscreen) {
+          GL.offscreenCanvases[canvas.id] = canvas.transferControlToOffscreen();
+          canvas.controlTransferredOffscreen = true;
+          GL.offscreenCanvases[canvas.id].id = canvas.id;
+        } else if (!GL.offscreenCanvases[canvas.id]) {
+#if GL_DEBUG
+          console.error('OffscreenCanvas is supported, and canvas "' + canvas.id + '" has already before been transferred offscreen, but there is no known OffscreenCanvas with that name!');
+#endif
+          return 0;
+        }
         canvas = GL.offscreenCanvases[canvas.id];
       }
     }
-#else
     if (contextAttributes['explicitSwapControl']) {
       console.error('emscripten_webgl_create_context failed: explicitSwapControl is not supported, please rebuild with -s OFFSCREENCANVAS_SUPPORT=1 to enable targeting the experimental OffscreenCanvas specification!');
       return 0;
@@ -1853,17 +1934,33 @@ var LibraryJSEvents = {
     var contextHandle = GL.createContext(canvas, contextAttributes);
     return contextHandle;
   },
-
+#if USE_PTHREADS
+  // Runs on the calling thread, proxies manually.
+  emscripten_webgl_do_make_context_current: function(contextHandle) {
+    var success = GL.makeContextCurrent(contextHandle);
+    if (success) {
+      GLctxIsOnParentThread = false; // If succeeded above, we will have a local GL context from this thread (worker or main).
+    } else {
+      success = _emscripten_webgl_make_context_current_main_thread(contextHandle) === {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}};
+      if (success) {
+        GLctxIsOnParentThread = true;
+        GLctx = Module.ctx = GL.currentContext = contextHandle; // In this special mode where GL context is being proxied to main thread, GLctx is an integer representing the actice context, and not the GL context object.
+      }
+    }
+    return success ? {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}} : {{{ cDefine('EMSCRIPTEN_RESULT_INVALID_PARAM') }}};
+  },
+#else
   emscripten_webgl_make_context_current: function(contextHandle) {
     var success = GL.makeContextCurrent(contextHandle);
     return success ? {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}} : {{{ cDefine('EMSCRIPTEN_RESULT_INVALID_PARAM') }}};
   },
+#endif
 
-  emscripten_webgl_get_current_context: function() {
+  emscripten_webgl_do_get_current_context: function() {
     return GL.currentContext ? GL.currentContext.handle : 0;
   },
 
-  emscripten_webgl_get_drawing_buffer_size: function(contextHandle, width, height) {
+  emscripten_webgl_get_drawing_buffer_size_calling_thread: function(contextHandle, width, height) {
     var GLContext = GL.getContext(contextHandle);
 
     if (!GLContext || !GLContext.GLctx || !width || !height) {
@@ -1874,7 +1971,26 @@ var LibraryJSEvents = {
     return {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}};
   },
 
-  emscripten_webgl_commit_frame: function() {
+#if USE_PTHREADS
+  emscripten_webgl_get_drawing_buffer_size_main_thread__proxy: 'sync',
+  emscripten_webgl_get_drawing_buffer_size_main_thread__sig: 'iiii',
+  emscripten_webgl_get_drawing_buffer_size_main_thread__deps: ['emscripten_webgl_get_drawing_buffer_size_calling_thread'],
+  emscripten_webgl_get_drawing_buffer_size_main_thread: function(contextHandle, width, height) { return _emscripten_webgl_get_drawing_buffer_size_calling_thread(contextHandle, width, height); },
+
+  emscripten_webgl_get_drawing_buffer_size__deps: ['emscripten_webgl_get_drawing_buffer_size_calling_thread', 'emscripten_webgl_get_drawing_buffer_size_main_thread'],
+  emscripten_webgl_get_drawing_buffer_size: function(contextHandle, width, height) {
+    if (GL.contexts[contextHandle]) return _emscripten_webgl_get_drawing_buffer_size_calling_thread(contextHandle, width, height);
+    else _emscripten_webgl_get_drawing_buffer_size_main_thread(contextHandle, width, height);
+  },
+#else
+  emscripten_webgl_get_drawing_buffer_size: 'emscripten_webgl_get_drawing_buffer_size_calling_thread',
+#endif
+
+  emscripten_webgl_do_commit_frame: function() {
+#if TRACE_WEBGL_CALLS
+    var threadId = (typeof _pthread_self !== 'undefined') ? _pthread_self : function() { return 1; };
+    console.error('[Thread ' + threadId() + ', GL ctx: ' + GL.currentContext.handle + ']: emscripten_webgl_do_commit_frame()');
+#endif
     if (!GL.currentContext || !GL.currentContext.GLctx) {
 #if GL_DEBUG
       console.error('emscripten_webgl_commit_frame() failed: no GL context set current via emscripten_webgl_make_context_current()!');
@@ -1897,11 +2013,26 @@ var LibraryJSEvents = {
     return {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}};
   },
 
-  emscripten_webgl_destroy_context: function(contextHandle) {
+  emscripten_webgl_destroy_context_calling_thread: function(contextHandle) {
     GL.deleteContext(contextHandle);
   },
 
-  emscripten_webgl_enable_extension: function(contextHandle, extension) {
+#if USE_PTHREADS
+  emscripten_webgl_destroy_context_main_thread__proxy: 'sync',
+  emscripten_webgl_destroy_context_main_thread__sig: 'vi',
+  emscripten_webgl_destroy_context_main_thread__deps: ['emscripten_webgl_destroy_context_calling_thread'],
+  emscripten_webgl_destroy_context_main_thread: function(contextHandle) { return _emscripten_webgl_destroy_context_calling_thread(contextHandle); },
+
+  emscripten_webgl_destroy_context__deps: ['emscripten_webgl_destroy_context_main_thread', 'emscripten_webgl_destroy_context_calling_thread'],
+  emscripten_webgl_destroy_context: function(contextHandle) {
+    if (GL.contexts[contextHandle]) _emscripten_webgl_destroy_context_calling_thread(contextHandle);
+    else _emscripten_webgl_destroy_context_main_thread(contextHandle);
+  },
+#else
+  emscripten_webgl_destroy_context: 'emscripten_webgl_destroy_context_calling_thread',
+#endif
+
+  emscripten_webgl_enable_extension_calling_thread: function(contextHandle, extension) {
     var context = GL.getContext(contextHandle);
     var extString = Pointer_stringify(extension);
     if (extString.indexOf('GL_') == 0) extString = extString.substr(3); // Allow enabling extensions both with "GL_" prefix and without.
@@ -1909,8 +2040,35 @@ var LibraryJSEvents = {
     return ext ? 1 : 0;
   },
 
-  emscripten_set_webglcontextlost_callback: function(target, userData, useCapture, callbackfunc) {
-    JSEvents.registerWebGlEventCallback(target, userData, useCapture, callbackfunc, {{{ cDefine('EMSCRIPTEN_EVENT_WEBGLCONTEXTLOST') }}}, "webglcontextlost");
+#if OFFSCREENCANVAS_SUPPORT
+  emscripten_supports_offscreencanvas: function() {
+    return typeof OffscreenCanvas !== 'undefined';
+  },
+#else
+  emscripten_supports_offscreencanvas: function() {
+    return 0;
+  },
+#endif
+
+#if USE_PTHREADS
+  emscripten_webgl_enable_extension_main_thread__proxy: 'sync',
+  emscripten_webgl_enable_extension_main_thread__sig: 'iii',
+  emscripten_webgl_enable_extension_main_thread__deps: ['emscripten_webgl_enable_extension_calling_thread'],
+  emscripten_webgl_enable_extension_main_thread: function(contextHandle) { return _emscripten_webgl_enable_extension_calling_thread(contextHandle); },
+
+  emscripten_webgl_enable_extension__deps: ['emscripten_webgl_enable_extension_main_thread', 'emscripten_webgl_enable_extension_calling_thread'],
+  emscripten_webgl_enable_extension: function(contextHandle) {
+    if (GL.contexts[contextHandle]) _emscripten_webgl_enable_extension_calling_thread(contextHandle);
+    else _emscripten_webgl_enable_extension_main_thread(contextHandle);
+  },
+#else
+  emscripten_webgl_enable_extension: 'emscripten_webgl_enable_extension_calling_thread',
+#endif
+
+  emscripten_set_webglcontextlost_callback_on_thread__proxy: 'sync',
+  emscripten_set_webglcontextlost_callback_on_thread__sig: 'iiiiii',
+  emscripten_set_webglcontextlost_callback_on_thread: function(target, userData, useCapture, callbackfunc, targetThread) {
+    JSEvents.registerWebGlEventCallback(target, userData, useCapture, callbackfunc, {{{ cDefine('EMSCRIPTEN_EVENT_WEBGLCONTEXTLOST') }}}, "webglcontextlost", targetThread);
     return {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}};
   },
 
@@ -1925,33 +2083,168 @@ var LibraryJSEvents = {
     return Module['ctx'].isContextLost();
   },
 
-  emscripten_set_canvas_element_size: function(target, width, height) {
-    if (target) target = JSEvents.findEventTarget(target);
-    else target = Module['canvas'];
-    if (!target) return {{{ cDefine('EMSCRIPTEN_RESULT_UNKNOWN_TARGET') }}};
+  emscripten_set_canvas_element_size_calling_thread: function(target, width, height) {
+    var canvas = JSEvents.findCanvasEventTarget(target);
+    if (!canvas) return {{{ cDefine('EMSCRIPTEN_RESULT_UNKNOWN_TARGET') }}};
 
-    target.width = width;
-    target.height = height;
-    return {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}};
-  },
-
-  emscripten_get_canvas_element_size: function(target, width, height) {
-    if (target) target = JSEvents.findEventTarget(target);
-    else target = Module['canvas'];
-    if (!target) return {{{ cDefine('EMSCRIPTEN_RESULT_UNKNOWN_TARGET') }}};
-
-    {{{ makeSetValue('width', '0', 'target.width', 'i32') }}};
-    {{{ makeSetValue('height', '0', 'target.height', 'i32') }}};
-    return {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}};
-  },
-
-  emscripten_set_element_css_size: function(target, width, height) {
-    if (!target) {
-      target = Module['canvas'];
-    } else {
-      target = JSEvents.findEventTarget(target);
+    if (canvas.canvasSharedPtr) {
+      // N.B. We hold the canvasSharedPtr info structure as the authoritative source for specifying the size of a canvas
+      // since the actual canvas size changes are asynchronous if the canvas is owned by an OffscreenCanvas on another thread.
+      // Therefore when setting the size, eagerly set the size of the canvas on the calling thread here, though this thread
+      // might not be the one that actually ends up specifying the size, but the actual size change may be dispatched
+      // as an asynchronous event below.
+      {{{ makeSetValue('canvas.canvasSharedPtr', 0, 'width', 'i32') }}};
+      {{{ makeSetValue('canvas.canvasSharedPtr', 4, 'height', 'i32') }}};
     }
 
+    if (canvas.offscreenCanvas || !canvas.controlTransferredOffscreen) {
+      if (canvas.offscreenCanvas) canvas = canvas.offscreenCanvas;
+      var autoResizeViewport = false;
+      if (canvas.GLctxObject && canvas.GLctxObject.GLctx) {
+        var prevViewport = canvas.GLctxObject.GLctx.getParameter(canvas.GLctxObject.GLctx.VIEWPORT);
+        // TODO: Perhaps autoResizeViewport should only be true if FBO 0 is currently active?
+        autoResizeViewport = (prevViewport[0] === 0 && prevViewport[1] === 0 && prevViewport[2] === canvas.width && prevViewport[3] === canvas.height);
+#if GL_DEBUG
+        console.error('Resizing canvas from ' + canvas.width + 'x' + canvas.height + ' to ' + width + 'x' + height + '. Previous GL viewport size was ' 
+          + prevViewport + ', so autoResizeViewport=' + autoResizeViewport);
+#endif
+      }
+      canvas.width = width;
+      canvas.height = height;
+      if (autoResizeViewport) {
+#if GL_DEBUG
+        console.error('Automatically resizing GL viewport to cover whole render target ' + width + 'x' + height);
+#endif
+        // TODO: Add -s CANVAS_RESIZE_SETS_GL_VIEWPORT=0/1 option (default=1). This is commonly done and several graphics engines depend on this,
+        // but this can be quite disruptive.
+        canvas.GLctxObject.GLctx.viewport(0, 0, width, height);
+      }
+    } else if (canvas.canvasSharedPtr) {
+      var stackTop = Runtime.stackSave();
+      var varargs = Runtime.stackAlloc(12);
+
+      // TODO: This could be optimized a bit (basically a dumb encoding agnostic strdup)
+      var targetStr = target ? Pointer_stringify(target) : 0;
+      var targetStrHeap = targetStr ? _malloc(targetStr.length+1) : 0;
+      if (targetStrHeap) stringToUTF8(targetStr, targetStrHeap, targetStr.length+1);
+
+      {{{ makeSetValue('varargs', 0, 'targetStrHeap', 'i32')}}};
+      {{{ makeSetValue('varargs', 4, 'width', 'i32')}}};
+      {{{ makeSetValue('varargs', 8, 'height', 'i32')}}};
+      var targetThread = {{{ makeGetValue('canvas.canvasSharedPtr', 8, 'i32') }}};
+      // Note: If we are also a pthread, the call below could theoretically be done synchronously. However if the target pthread is waiting for a mutex from us, then
+      // these two threads will deadlock. At the moment, we'd like to consider that this kind of deadlock would be an Emscripten runtime bug, although if
+      // emscripten_set_canvas_element_size() was documented to require running an event in the queue of thread that owns the OffscreenCanvas, then that might be ok.
+      // (safer this way however)
+      _emscripten_async_queue_on_thread_(targetThread, {{{ cDefine('EM_PROXIED_RESIZE_OFFSCREENCANVAS') }}}, 0, targetStrHeap /* satellite data */, varargs);
+      Runtime.stackRestore(stackTop);
+      return {{{ cDefine('EMSCRIPTEN_RESULT_DEFERRED') }}}; // This will have to be done asynchronously
+    } else {
+#if GL_DEBUG
+      console.error('canvas.controlTransferredOffscreen but we do not own the canvas, and do not know who has (no canvas.canvasSharedPtr present, an internal bug?)!\n');
+#endif
+      return {{{ cDefine('EMSCRIPTEN_RESULT_UNKNOWN_TARGET') }}};
+    }
+    return {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}};
+  },
+
+  emscripten_set_canvas_element_size_main_thread__proxy: 'sync',
+  emscripten_set_canvas_element_size_main_thread__sig: 'iiii',
+  emscripten_set_canvas_element_size_main_thread__deps: ['emscripten_set_canvas_element_size_calling_thread'],
+  emscripten_set_canvas_element_size_main_thread: function(target, width, height) { return _emscripten_set_canvas_element_size_calling_thread(target, width, height); },
+
+  emscripten_set_canvas_element_size__deps: ['emscripten_set_canvas_element_size_calling_thread', 'emscripten_set_canvas_element_size_main_thread'],
+  emscripten_set_canvas_element_size: function(target, width, height) {
+#if GL_DEBUG
+    console.error('emscripten_set_canvas_element_size(target='+target+',width='+width+',height='+height);
+#endif
+    var canvas = JSEvents.findCanvasEventTarget(target);
+    if (canvas) return _emscripten_set_canvas_element_size_calling_thread(target, width, height);
+    else return _emscripten_set_canvas_element_size_main_thread(target, width, height);
+  }, 
+
+  // JavaScript-friendly API
+  $emscripten_set_canvas_element_size_js__deps: ['emscripten_set_canvas_element_size'],
+  $emscripten_set_canvas_element_size_js: function(target, width, height) {
+#if GL_DEBUG
+    console.error('$emscripten_set_canvas_element_size_js(target='+target+',width='+width+',height='+height);
+#endif
+    if (typeof target === 'string') {
+      // This function is being called from high-level JavaScript code instead of asm.js/Wasm,
+      // and it needs to synchronously proxy over to another thread, so marshal the string onto the heap to do the call.
+      var stackTop = Runtime.stackSave();
+      var targetInt = Runtime.stackAlloc(target.length+1);
+      stringToUTF8(target, targetInt, target.length+1);
+      var ret = _emscripten_set_canvas_element_size(targetInt, width, height);
+      Runtime.stackRestore(stackTop);
+      return ret;
+    } else {
+      return _emscripten_set_canvas_element_size(target, width, height);
+    }
+  }, 
+
+  emscripten_get_canvas_element_size_calling_thread: function(target, width, height) {
+    var canvas = JSEvents.findCanvasEventTarget(target);
+    if (!canvas) return {{{ cDefine('EMSCRIPTEN_RESULT_UNKNOWN_TARGET') }}};
+
+    if (canvas.canvasSharedPtr) {
+      // N.B. Reading the size of the Canvas takes priority from our shared state structure, which is not the actual size.
+      // However if is possible that there is a canvas size set event pending on an OffscreenCanvas owned by another thread,
+      // so that the real sizes of the canvas have not updated yet. Therefore reading the real values would be racy.
+      var w = {{{ makeGetValue('canvas.canvasSharedPtr', 0, 'i32') }}};
+      var h = {{{ makeGetValue('canvas.canvasSharedPtr', 4, 'i32') }}};
+      {{{ makeSetValue('width', 0, 'w', 'i32') }}};
+      {{{ makeSetValue('height', 0, 'h', 'i32') }}};
+    } else if (canvas.offscreenCanvas) {
+      {{{ makeSetValue('width', 0, 'canvas.offscreenCanvas.width', 'i32') }}};
+      {{{ makeSetValue('height', 0, 'canvas.offscreenCanvas.height', 'i32') }}};
+    } else if (!canvas.controlTransferredOffscreen) {
+      {{{ makeSetValue('width', 0, 'canvas.width', 'i32') }}};
+      {{{ makeSetValue('height', 0, 'canvas.height', 'i32') }}};
+    } else {
+#if GL_DEBUG
+      console.error('canvas.controlTransferredOffscreen but we do not own the canvas, and do not know who has (no canvas.canvasSharedPtr present, an internal bug?)!\n');
+#endif
+      return {{{ cDefine('EMSCRIPTEN_RESULT_UNKNOWN_TARGET') }}};
+    }
+    return {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}};
+  },
+
+  emscripten_get_canvas_element_size_main_thread__proxy: 'sync',
+  emscripten_get_canvas_element_size_main_thread__sig: 'iiii',
+  emscripten_get_canvas_element_size_main_thread__deps: ['emscripten_get_canvas_element_size_calling_thread'],
+  emscripten_get_canvas_element_size_main_thread: function(target, width, height) { return _emscripten_get_canvas_element_size_calling_thread(target, width, height); },
+
+  emscripten_get_canvas_element_size__deps: ['emscripten_get_canvas_element_size_calling_thread', 'emscripten_get_canvas_element_size_main_thread'],
+  emscripten_get_canvas_element_size: function(target, width, height) {
+    var canvas = JSEvents.findCanvasEventTarget(target);
+    if (canvas) return _emscripten_get_canvas_element_size_calling_thread(target, width, height);
+    else return _emscripten_get_canvas_element_size_main_thread(target, width, height);
+  }, 
+
+  // JavaScript-friendly API, returns pair [width, height]
+  $emscripten_get_canvas_element_size_js__deps: ['emscripten_get_canvas_element_size'],
+  $emscripten_get_canvas_element_size_js: function(target) {
+    var stackTop = Runtime.stackSave();
+    var w = Runtime.stackAlloc(8);
+    var h = w + 4;
+
+    if (typeof target === 'string') {
+      var targetInt = Runtime.stackAlloc(target.length+1);
+      stringToUTF8(target, targetInt, target.length+1);
+      target = targetInt;
+    }
+    var ret = _emscripten_get_canvas_element_size(target, w, h);
+    var size = [{{{ makeGetValue('w', 0, 'i32')}}}, {{{ makeGetValue('h', 0, 'i32')}}}];
+    Runtime.stackRestore(stackTop);
+    return size;
+  }, 
+
+  emscripten_set_element_css_size__proxy: 'sync',
+  emscripten_set_element_css_size__sig: 'iiii',
+  emscripten_set_element_css_size: function(target, width, height) {
+    if (target) target = JSEvents.findEventTarget(target);
+    else target = Module['canvas'];
     if (!target) return {{{ cDefine('EMSCRIPTEN_RESULT_UNKNOWN_TARGET') }}};
 
     target.style.setProperty("width", width + "px");

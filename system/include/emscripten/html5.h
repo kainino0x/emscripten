@@ -399,6 +399,11 @@ extern EMSCRIPTEN_RESULT emscripten_set_beforeunload_callback(void *userData, em
 
 typedef int EMSCRIPTEN_WEBGL_CONTEXT_HANDLE;
 
+typedef int EMSCRIPTEN_WEBGL_CONTEXT_PROXY_MODE;
+#define EMSCRIPTEN_WEBGL_CONTEXT_PROXY_DISALLOW 0
+#define EMSCRIPTEN_WEBGL_CONTEXT_PROXY_FALLBACK 1
+#define EMSCRIPTEN_WEBGL_CONTEXT_PROXY_ALWAYS   2
+
 typedef struct EmscriptenWebGLContextAttributes {
   EM_BOOL alpha;
   EM_BOOL depth;
@@ -414,6 +419,8 @@ typedef struct EmscriptenWebGLContextAttributes {
 
   EM_BOOL enableExtensionsByDefault;
   EM_BOOL explicitSwapControl;
+  EMSCRIPTEN_WEBGL_CONTEXT_PROXY_MODE proxyContextToMainThread;
+  EM_BOOL renderViaOffscreenBackBuffer;
 } EmscriptenWebGLContextAttributes;
 
 extern void emscripten_webgl_init_context_attributes(EmscriptenWebGLContextAttributes *attributes);
@@ -436,7 +443,9 @@ extern EMSCRIPTEN_RESULT emscripten_set_webglcontextrestored_callback(const char
 
 extern EM_BOOL emscripten_is_webgl_context_lost(const char *target);
 
-extern EMSCRIPTEN_RESULT emscripten_webgl_commit_frame();
+extern EMSCRIPTEN_RESULT emscripten_webgl_commit_frame(void);
+
+extern EM_BOOL emscripten_supports_offscreencanvas(void);
 
 extern EMSCRIPTEN_RESULT emscripten_set_canvas_element_size(const char *target, int width, int height);
 extern EMSCRIPTEN_RESULT emscripten_get_canvas_element_size(const char *target, int *width, int *height);

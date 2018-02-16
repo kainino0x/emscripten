@@ -1689,7 +1689,6 @@ void* emscripten_GetProcAddress(const char *name_) {
   if (!strcmp(name, "glNormalPointer")) return emscripten_glNormalPointer;
   if (!strcmp(name, "glColorPointer")) return emscripten_glColorPointer;
   if (!strcmp(name, "glClientActiveTexture")) return emscripten_glClientActiveTexture;
-  if (!strcmp(name, "glIsVertexArray")) return emscripten_glIsVertexArray;
   if (!strcmp(name, "glGenVertexArrays")) return emscripten_glGenVertexArrays;
   if (!strcmp(name, "glDeleteVertexArrays")) return emscripten_glDeleteVertexArrays;
   if (!strcmp(name, "glBindVertexArray")) return emscripten_glBindVertexArray;
