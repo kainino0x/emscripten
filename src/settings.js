@@ -813,6 +813,9 @@ var DEBUG_TAGS_SHOWING = [];
 // For internal use only
 var ORIGINAL_EXPORTED_FUNCTIONS = [];
 
+// Internal: tracks the list of function signatures that are proxied between threads.
+var PROXIED_FUNCTION_SIGNATURES = [];
+
 // The list of defines (C_DEFINES) was moved into struct_info.json in the same directory.
 // That file is automatically parsed by tools/gen_struct_info.py.
 // If you modify the headers, just clear your cache and emscripten libc should see
