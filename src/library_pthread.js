@@ -1152,7 +1152,9 @@ var LibraryPThread = {
   },
 
   __call_main: function(argc, argv) {
-    return _main(argc, argv);
+    var returnCode = _main(argc, argv);
+    if (!Module['noExitRuntime']) postMessage({ cmd: 'exitProcess', returnCode: returnCode });
+    return returnCode;
   },
 
   emscripten_conditional_set_current_thread_status_js: function(expectedStatus, newStatus) {

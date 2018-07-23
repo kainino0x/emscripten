@@ -1217,7 +1217,8 @@ keydown(100);keyup(100); // trigger the end
     self.btest('preinitialized_webgl_context.cpp', '5', args=['-s', 'GL_PREINITIALIZED_CONTEXT=1', '--shell-file', path_from_root('tests/preinitialized_webgl_context.html')])
 
   def test_emscripten_get_now(self):
-    self.btest('emscripten_get_now.cpp', '1')
+    for args in [[], ['-s', 'USE_PTHREADS=1']]:
+      self.btest('emscripten_get_now.cpp', '1', args=args)
 
   @unittest.skip('Skipping due to https://github.com/kripken/emscripten/issues/2770')
   def test_fflush(self):
@@ -1365,7 +1366,8 @@ keydown(100);keyup(100); // trigger the end
     self.btest(path_from_root('tests', 'idbstore_sync_worker.c'), '6', force_c=True, args=['-lidbstore.js', '-DSECRET=\"' + secret + '\"', '-s', 'EMTERPRETIFY=1', '-s', 'EMTERPRETIFY_ASYNC=1', '--memory-init-file', '1', '-O3', '-g2', '--proxy-to-worker', '-s', 'TOTAL_MEMORY=80MB'])
 
   def test_force_exit(self):
-    self.btest('force_exit.c', force_c=True, expected='17')
+    for args in [[], ['-s', 'USE_PTHREADS=1', '-s', 'PROXY_TO_PTHREAD=1']]:
+      self.btest('force_exit.c', force_c=True, expected='17')
 
   def test_sdl_pumpevents(self):
     # key events should be detected using SDL_PumpEvents
@@ -3911,6 +3913,11 @@ window.close = function() {
     # TODO: Make this automatic by injecting enter key press in e.g. shell html file.
     for args in [[], ['-s', 'USE_PTHREADS=1', '-s', 'PROXY_TO_PTHREAD=1']]:
       self.btest('html5_event_callback_in_two_threads.c', expected='1', args=args)
+
+  # Test that emscripten_get_device_pixel_ratio() is callable from pthreads (and proxies to main thread to obtain the proper window.devicePixelRatio value).
+  def test_emscripten_get_device_pixel_ratio(self):
+    for args in [[], ['-s', 'USE_PTHREADS=1', '-s', 'PROXY_TO_PTHREAD=1']]:
+      self.btest('emscripten_get_device_pixel_ratio.c', expected='1', args=args)
 
   # Tests the absolute minimum pthread-enabled application.
   def test_hello_thread(self):
