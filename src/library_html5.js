@@ -2383,11 +2383,6 @@ var LibraryJSEvents = {
   emscripten_set_webglcontextlost_callback_on_thread__sig: 'iiiiii',
   emscripten_set_webglcontextlost_callback_on_thread: function(target, userData, useCapture, callbackfunc, targetThread) {
     JSEvents.registerWebGlEventCallback(target, userData, useCapture, callbackfunc, {{{ cDefine('EMSCRIPTEN_EVENT_WEBGLCONTEXTLOST') }}}, "webglcontextlost", targetThread);
-
-  emscripten_set_webglcontextlost_callback_on_thread__proxy: 'sync',
-  emscripten_set_webglcontextlost_callback_on_thread__sig: 'iiiiii',
-  emscripten_set_webglcontextlost_callback_on_thread: function(target, userData, useCapture, callbackfunc, targetThread) {
-    JSEvents.registerWebGlEventCallback(target, userData, useCapture, callbackfunc, {{{ cDefine('EMSCRIPTEN_EVENT_WEBGLCONTEXTLOST') }}}, "webglcontextlost", targetThread);
     return {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}};
   },
 
