@@ -4,7 +4,14 @@
  */
 
 var LibraryGL = {
+#if USE_PTHREADS
+  // If GLctxIsOnParentThread is true, then
+  //   a) the running thread is not the main browser thread, and
+  //   b) the currently active GL context is running on the main browser thread, so all GL calls need to be proxied to it.
+  $GL__postset: 'var GLctx; var GLctxIsOnParentThread = false; GL.init()',
+#else
   $GL__postset: 'var GLctx; GL.init()',
+#endif
   $GL: {
 #if GL_DEBUG
     debug: true,
@@ -543,7 +550,11 @@ var LibraryGL = {
     },
 
     registerContext: function(ctx, webGLContextAttributes) {
-      var handle = GL.getNewId(GL.contexts);
+      var handle = _malloc(8); // Make space on the heap to store GL context attributes that need to be accessible as shared between threads.
+      {{{ makeSetValue('handle', 0, 'webGLContextAttributes["explicitSwapControl"]', 'i32')}}}; // explicitSwapControl
+#if USE_PTHREADS
+      {{{ makeSetValue('handle', 4, '_pthread_self()', 'i32')}}}; // the thread pointer of the thread that owns the control of the context
+#endif
       var context = {
         handle: handle,
         attributes: webGLContextAttributes,
@@ -601,6 +612,7 @@ var LibraryGL = {
       if (GL.currentContext === GL.contexts[contextHandle]) GL.currentContext = null;
       if (typeof JSEvents === 'object') JSEvents.removeAllHandlersOnTarget(GL.contexts[contextHandle].GLctx.canvas); // Release all JS event handlers on the DOM element that the GL context is associated with since the context is now deleted.
       if (GL.contexts[contextHandle] && GL.contexts[contextHandle].GLctx.canvas) GL.contexts[contextHandle].GLctx.canvas.GLctxObject = undefined; // Make sure the canvas object no longer refers to the context object so there are no GC surprises.
+      _free(GL.contexts[contextHandle]);
       GL.contexts[contextHandle] = null;
     },
 
