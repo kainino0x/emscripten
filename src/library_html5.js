@@ -2397,8 +2397,8 @@ var LibraryJSEvents = {
   emscripten_is_webgl_context_lost__sig: 'ii',
   emscripten_is_webgl_context_lost: function(target) {
     // TODO: In the future if multiple GL contexts are supported, use the 'target' parameter to find the canvas to query.
-    if (!Module['ctx']) return true; // No context ~> lost context.
-    return Module['ctx'].isContextLost();
+    if (!Module.ctx) return true; // No context ~> lost context.
+    return Module.ctx.isContextLost();
   },
 
   emscripten_set_canvas_element_size_calling_thread: function(target, width, height) {

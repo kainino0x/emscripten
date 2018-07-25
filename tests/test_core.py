@@ -6225,6 +6225,7 @@ def process(filename):
 
   @sync
   def test_ccall(self):
+    self.emcc_args.append('-Wno-return-stack-address')
     self.set_setting('EXTRA_EXPORTED_RUNTIME_METHODS', ['ccall', 'cwrap'])
     post = '''
 def process(filename):
