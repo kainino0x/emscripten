@@ -462,6 +462,10 @@ Module["noExitRuntime"] = true;
 
 #if USE_PTHREADS
 if (!ENVIRONMENT_IS_PTHREAD) run();
+
+// XXXXXX HACKS
+Module._emscripten_futex_wake = _emscripten_futex_wake;
+
 #else
 run();
 #endif
