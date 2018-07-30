@@ -1893,8 +1893,8 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
 
       if shared.Settings.USE_PTHREADS:
         target_dir = os.path.dirname(os.path.abspath(target))
-        shutil.copyfile(shared.path_from_root('src', 'pthread-main.js'),
-                        os.path.join(target_dir, 'pthread-main.js'))
+        shared.run_c_preprocessor_on_file(shared.path_from_root('src', 'pthread-main.js'),
+                                          os.path.join(target_dir, 'pthread-main.js'))
 
       # Generate the fetch-worker.js script for multithreaded emscripten_fetch() support if targeting pthreads.
       if shared.Settings.FETCH and shared.Settings.USE_PTHREADS:
@@ -2590,9 +2590,15 @@ def do_binaryen(target, asm_target, options, memfile, wasm_binary_target,
     f.close()
     f = open(final, 'w')
     for target, replacement_string, should_embed in (
-        (wasm_text_target, shared.FilenameReplacementStrings.WASM_TEXT_FILE, True),
-        (wasm_binary_target, shared.FilenameReplacementStrings.WASM_BINARY_FILE, True),
-        (asm_target, shared.FilenameReplacementStrings.ASMJS_CODE_FILE, not shared.Building.is_wasm_only())
+        (wasm_text_target,
+         shared.FilenameReplacementStrings.WASM_TEXT_FILE,
+         'interpret-s-expr' in shared.Settings.BINARYEN_METHOD),
+        (wasm_binary_target,
+         shared.FilenameReplacementStrings.WASM_BINARY_FILE,
+         'native-wasm' in shared.Settings.BINARYEN_METHOD or 'interpret-binary' in shared.Settings.BINARYEN_METHOD),
+        (asm_target,
+         shared.FilenameReplacementStrings.ASMJS_CODE_FILE,
+         'asmjs' in shared.Settings.BINARYEN_METHOD or 'interpret-asm2wasm' in shared.Settings.BINARYEN_METHOD),
       ):
       if should_embed and os.path.isfile(target):
         js = js.replace(replacement_string, shared.JS.get_subresource_location(target))
@@ -2610,22 +2616,43 @@ def modularize():
   final = final + '.modular.js'
   f = open(final, 'w')
 
-  # Included code may refer to Module (e.g. from file packager), so alias it
-  f.write('''var %(EXPORT_NAME)s = function(%(EXPORT_NAME)s) {
+  src = '''
+function(%(EXPORT_NAME)s) {
   %(EXPORT_NAME)s = %(EXPORT_NAME)s || {};
 
 %(src)s
 
   return %(EXPORT_NAME)s;
-};
-%(EXPORT_NAME)s = %(EXPORT_NAME)s.bind({
-  _currentScript: typeof document !== 'undefined' ? document.currentScript : undefined
-})%(instantiate)s;
+}
 ''' % {
     'EXPORT_NAME': shared.Settings.EXPORT_NAME,
-    'src': src,
-    'instantiate': '()' if shared.Settings.MODULARIZE_INSTANCE else ''
-  })
+    'src': src
+  }
+
+  if not shared.Settings.MODULARIZE_INSTANCE:
+    # When MODULARIZE this JS may be executed later,
+    # after document.currentScript is gone, so we save it.
+    # (when MODULARIZE_INSTANCE, an instance is created
+    # immediately anyhow, like in non-modularize mode)
+    src = '''
+var %(EXPORT_NAME)s = (function() {
+  var _scriptDir = typeof document !== 'undefined' && document.currentScript ? document.currentScript.src : undefined;
+  return (%(src)s);
+})();
+''' % {
+      'EXPORT_NAME': shared.Settings.EXPORT_NAME,
+      'src': src
+    }
+  else:
+    # Create the MODULARIZE_INSTANCE instance
+    src = '''
+var %(EXPORT_NAME)s = (%(src)s)();
+''' % {
+      'EXPORT_NAME': shared.Settings.EXPORT_NAME,
+      'src': src
+    }
+
+  f.write(src)
 
   # Export using a UMD style export, or ES6 exports if selected
   if shared.Settings.EXPORT_ES6:
