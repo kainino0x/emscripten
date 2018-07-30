@@ -300,8 +300,8 @@ except Exception as e:
 # scons can find emscripten by looking at the config.  Although its not used
 # within emscripten itself this is good to time sanity check the value.
 EMSCRIPTEN_ROOT = os.path.expanduser(os.path.normpath(EMSCRIPTEN_ROOT))
-if EMSCRIPTEN_ROOT != __rootpath__:
-  exit_with_error('Incorrect EMSCRIPTEN_ROOT in config file: %s (Expected %s)', EMSCRIPTEN_ROOT, __rootpath__)
+if os.path.realpath(EMSCRIPTEN_ROOT) != os.path.realpath(__rootpath__):
+  logging.warning('Incorrect EMSCRIPTEN_ROOT in config file: %s (Expected %s)', EMSCRIPTEN_ROOT, __rootpath__)
 
 
 # Returns a suggestion where current .emscripten config file might be located
