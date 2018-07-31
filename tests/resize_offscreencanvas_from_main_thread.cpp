@@ -29,7 +29,7 @@ void thread_local_main_loop()
     emscripten_cancel_main_loop();
 #endif
 
-    THREAD_LOCAL_EM_ASM(Module['noExitRuntime']=false);
+    EM_ASM(Module['noExitRuntime']=false);
     exit(0);
   }
 }
@@ -58,7 +58,7 @@ void *thread_main(void *arg)
   emscripten_set_main_loop(thread_local_main_loop, 1, 0);
 #endif
 
-  THREAD_LOCAL_EM_ASM(Module['noExitRuntime']=true);
+  EM_ASM(Module['noExitRuntime']=true);
   return 0;
 }
 
