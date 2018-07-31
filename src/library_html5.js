@@ -2071,7 +2071,7 @@ var LibraryJSEvents = {
   
   emscripten_set_batterychargingchange_callback_on_thread__proxy: 'sync',
   emscripten_set_batterychargingchange_callback_on_thread__sig: 'iii',
-  emscripten_set_batterychargingchange_callback_on_thread: function(userData, callbackfunc) {
+  emscripten_set_batterychargingchange_callback_on_thread: function(userData, callbackfunc, targetThread) {
     if (!JSEvents.battery()) return {{{ cDefine('EMSCRIPTEN_RESULT_NOT_SUPPORTED') }}}; 
     JSEvents.registerBatteryEventCallback(JSEvents.battery(), userData, true, callbackfunc, {{{ cDefine('EMSCRIPTEN_EVENT_BATTERYCHARGINGCHANGE') }}}, "chargingchange", targetThread);
     return {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}};
@@ -2079,7 +2079,7 @@ var LibraryJSEvents = {
 
   emscripten_set_batterylevelchange_callback_on_thread__proxy: 'sync',
   emscripten_set_batterylevelchange_callback_on_thread__sig: 'iii',
-  emscripten_set_batterylevelchange_callback_on_thread: function(userData, callbackfunc) {
+  emscripten_set_batterylevelchange_callback_on_thread: function(userData, callbackfunc, targetThread) {
     if (!JSEvents.battery()) return {{{ cDefine('EMSCRIPTEN_RESULT_NOT_SUPPORTED') }}}; 
     JSEvents.registerBatteryEventCallback(JSEvents.battery(), userData, true, callbackfunc, {{{ cDefine('EMSCRIPTEN_EVENT_BATTERYLEVELCHANGE') }}}, "levelchange", targetThread);
     return {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}};
@@ -2437,6 +2437,7 @@ var LibraryJSEvents = {
         // but this can be quite disruptive.
         canvas.GLctxObject.GLctx.viewport(0, 0, width, height);
       }
+#if USE_PTHREADS
     } else if (canvas.canvasSharedPtr) {
       var stackTop = Runtime.stackSave();
       var varargs = Runtime.stackAlloc(12);
@@ -2457,6 +2458,7 @@ var LibraryJSEvents = {
       _emscripten_async_queue_on_thread_(targetThread, {{{ cDefine('EM_PROXIED_RESIZE_OFFSCREENCANVAS') }}}, 0, targetStrHeap /* satellite data */, varargs);
       Runtime.stackRestore(stackTop);
       return {{{ cDefine('EMSCRIPTEN_RESULT_DEFERRED') }}}; // This will have to be done asynchronously
+#endif
     } else {
 #if GL_DEBUG
       console.error('canvas.controlTransferredOffscreen but we do not own the canvas, and do not know who has (no canvas.canvasSharedPtr present, an internal bug?)!\n');
