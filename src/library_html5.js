@@ -60,7 +60,7 @@ var LibraryJSEvents = {
         __ATEXIT__.push(function() {
             JSEvents.removeAllEventListeners();
           }
-         });
+         );
         JSEvents.removeEventListenersRegistered = true;
       }
     },
