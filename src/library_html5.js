@@ -1,5 +1,6 @@
 var LibraryJSEvents = {
   $JSEvents__postset: 'JSEvents.staticInit();',
+  $JSEvents__deps: ['$emscripten_set_canvas_element_size_js', '$emscripten_get_canvas_element_size_js'],
   $JSEvents: {
     // pointers to structs malloc()ed to Emscripten HEAP for JS->C interop.
     keyEvent: 0,
