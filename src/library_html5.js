@@ -49,11 +49,16 @@ var LibraryJSEvents = {
       }
     },
 
+    removeAllEventListeners: function() {
+      for(var i = JSEvents.eventHandlers.length-1; i >= 0; --i) {
+        JSEvents._removeHandler(i);
+      }
+    },
+
     registerRemoveEventListeners: function() {
       if (!JSEvents.removeEventListenersRegistered) {
-      __ATEXIT__.push(function() {
-          for(var i = JSEvents.eventHandlers.length-1; i >= 0; --i) {
-            JSEvents._removeHandler(i);
+        __ATEXIT__.push(function() {
+            JSEvents.removeAllEventListeners();
           }
          });
         JSEvents.removeEventListenersRegistered = true;
