@@ -213,13 +213,13 @@ var LibraryJSEvents = {
 
 #if USE_PTHREADS
     queueEventHandlerOnThread_iiii: function(targetThread, eventHandlerFunc, eventTypeId, eventData, userData) {
-      var stackTop = Runtime.stackSave();
-      var varargs = Runtime.stackAlloc(12);
+      var stackTop = stackSave();
+      var varargs = stackAlloc(12);
       {{{ makeSetValue('varargs', 0, 'eventTypeId', 'i32') }}};
       {{{ makeSetValue('varargs', 4, 'eventData', 'i32') }}};
       {{{ makeSetValue('varargs', 8, 'userData', 'i32') }}};
       _emscripten_async_queue_on_thread_(targetThread, {{{ cDefine('EM_FUNC_SIG_IIII') }}}, eventHandlerFunc, eventData, varargs);
-      Runtime.stackRestore(stackTop);
+      stackRestore(stackTop);
     },
 #endif
 
@@ -2453,8 +2453,8 @@ var LibraryJSEvents = {
       }
 #if USE_PTHREADS
     } else if (canvas.canvasSharedPtr) {
-      var stackTop = Runtime.stackSave();
-      var varargs = Runtime.stackAlloc(12);
+      var stackTop = stackSave();
+      var varargs = stackAlloc(12);
 
       // TODO: This could be optimized a bit (basically a dumb encoding agnostic strdup)
       var targetStr = target ? Pointer_stringify(target) : 0;
@@ -2470,7 +2470,7 @@ var LibraryJSEvents = {
       // emscripten_set_canvas_element_size() was documented to require running an event in the queue of thread that owns the OffscreenCanvas, then that might be ok.
       // (safer this way however)
       _emscripten_async_queue_on_thread_(targetThread, {{{ cDefine('EM_PROXIED_RESIZE_OFFSCREENCANVAS') }}}, 0, targetStrHeap /* satellite data */, varargs);
-      Runtime.stackRestore(stackTop);
+      stackRestore(stackTop);
       return {{{ cDefine('EMSCRIPTEN_RESULT_DEFERRED') }}}; // This will have to be done asynchronously
 #endif
     } else {
@@ -2509,11 +2509,11 @@ var LibraryJSEvents = {
     if (typeof target === 'string') {
       // This function is being called from high-level JavaScript code instead of asm.js/Wasm,
       // and it needs to synchronously proxy over to another thread, so marshal the string onto the heap to do the call.
-      var stackTop = Runtime.stackSave();
-      var targetInt = Runtime.stackAlloc(target.length+1);
+      var stackTop = stackSave();
+      var targetInt = stackAlloc(target.length+1);
       stringToUTF8(target, targetInt, target.length+1);
       var ret = _emscripten_set_canvas_element_size(targetInt, width, height);
-      Runtime.stackRestore(stackTop);
+      stackRestore(stackTop);
       return ret;
     } else {
       return _emscripten_set_canvas_element_size(target, width, height);
@@ -2562,18 +2562,18 @@ var LibraryJSEvents = {
   // JavaScript-friendly API, returns pair [width, height]
   $emscripten_get_canvas_element_size_js__deps: ['emscripten_get_canvas_element_size'],
   $emscripten_get_canvas_element_size_js: function(target) {
-    var stackTop = Runtime.stackSave();
-    var w = Runtime.stackAlloc(8);
+    var stackTop = stackSave();
+    var w = stackAlloc(8);
     var h = w + 4;
 
     if (typeof target === 'string') {
-      var targetInt = Runtime.stackAlloc(target.length+1);
+      var targetInt = stackAlloc(target.length+1);
       stringToUTF8(target, targetInt, target.length+1);
       target = targetInt;
     }
     var ret = _emscripten_get_canvas_element_size(target, w, h);
     var size = [{{{ makeGetValue('w', 0, 'i32')}}}, {{{ makeGetValue('h', 0, 'i32')}}}];
-    Runtime.stackRestore(stackTop);
+    stackRestore(stackTop);
     return size;
   }, 
 
