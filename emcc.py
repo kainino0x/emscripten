@@ -1228,6 +1228,8 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
         ]
 
       if shared.Settings.USE_PTHREADS:
+        # Firefox has bug with TextDecoder handling of UTF-8, and Chrome does not allow TextDecoder to work from SharedArrayBuffer.
+        shared.Settings.TEXTDECODER = 0;
         if shared.Settings.LINKABLE:
           exit_with_error('-s LINKABLE=1 is not supported with -s USE_PTHREADS>0!')
         if shared.Settings.SIDE_MODULE:
