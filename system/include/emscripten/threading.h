@@ -54,7 +54,7 @@ double emscripten_atomic_store_f64(void/*double*/ *addr, double val); // Emulate
 
 void emscripten_atomic_fence(void);
 
-// Each of the functions below (add, sub, and, or, xor) returns the value that was stored to memory after the operation occurred.
+// Each of the functions below (add, sub, and, or, xor) return the value that was in the memory location before the operation occurred.
 uint8_t emscripten_atomic_add_u8(void/*uint8_t*/ *addr, uint8_t val);
 uint16_t emscripten_atomic_add_u16(void/*uint16_t*/ *addr, uint16_t val);
 uint32_t emscripten_atomic_add_u32(void/*uint32_t*/ *addr, uint32_t val);
