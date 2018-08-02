@@ -16,7 +16,7 @@ void __wait(volatile int *addr, volatile int *waiters, int val, int priv)
 	}
 	if (waiters) a_inc(waiters);
 #ifdef __EMSCRIPTEN__
-	int is_main_thread = emscripten_is_main_runtime_thread();
+	int is_main_thread = emscripten_is_main_browser_thread();
 	while (*addr==val) {
 		if (pthread_self()->cancelasync == PTHREAD_CANCEL_ASYNCHRONOUS) {
 			// Must wait in slices in case this thread is cancelled in between.

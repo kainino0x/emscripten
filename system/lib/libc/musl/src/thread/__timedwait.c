@@ -43,7 +43,7 @@ int __timedwait_cp(volatile int *addr, int val,
 
 #ifdef __EMSCRIPTEN__
 	if (1 || pthread_self()->cancelasync == PTHREAD_CANCEL_ASYNCHRONOUS) {
-		int is_main_thread = emscripten_is_main_runtime_thread();
+		int is_main_thread = emscripten_is_main_browser_thread();
 		do {
 			if (_pthread_isduecanceled(pthread_self())) {
 				// Emscripten-specific return value: The wait was canceled by user calling
