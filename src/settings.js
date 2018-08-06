@@ -281,6 +281,8 @@ var WEBSOCKET_URL = 'ws://'; // A string containing either a WebSocket URL prefi
 var WEBSOCKET_SUBPROTOCOL = 'binary'; // A string containing a comma separated list of WebSocket subprotocols
                                       // as would be present in the Sec-WebSocket-Protocol header.
 
+var WEBSOCKET_DEBUG = 0; // If 1, prints out debugging related to WebSockets calls. If 2, traces bytes communicated via the socket.
+
 var OPENAL_DEBUG = 0; // Print out debugging information from our OpenAL implementation.
 
 var GL_ASSERTIONS = 0; // Adds extra checks for error situations in the GL library. Can impact performance.
