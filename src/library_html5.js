@@ -3,6 +3,7 @@ var LibraryJSEvents = {
   $JSEvents__deps: ['$emscripten_set_canvas_element_size_js', '$emscripten_get_canvas_element_size_js'],
   $JSEvents: {
     // pointers to structs malloc()ed to Emscripten HEAP for JS->C interop.
+    /*
     keyEvent: 0,
     mouseEvent: 0,
     wheelEvent: 0,
@@ -35,7 +36,9 @@ var LibraryJSEvents = {
     // When the C runtime exits via exit(), we unregister all event handlers added by this library to be nice and clean.
     // Track in this field whether we have yet registered that __ATEXIT__ handler.
     removeEventListenersRegistered: false, 
+    */
 
+#if REGISTER_GAMEPADS_AT_START
     staticInit: function() {
       if (typeof window !== 'undefined') {
         window.addEventListener("gamepadconnected", function() { ++JSEvents.numGamepadsConnected; });
@@ -49,6 +52,7 @@ var LibraryJSEvents = {
         }
       }
     },
+#endif
 
     removeAllEventListeners: function() {
       for(var i = JSEvents.eventHandlers.length-1; i >= 0; --i) {
@@ -2607,6 +2611,16 @@ var LibraryJSEvents = {
     }
 
     return {{{ cDefine('EMSCRIPTEN_RESULT_SUCCESS') }}};
+  },
+
+  emscripten_request_animation_frame: function(cb, userData) {
+    return emscripten_request_animation_frame(function(timeStamp) {
+      Module['dynCall_vdi'](cb, timeStamp, userData);
+    });
+  },
+
+  emscripten_cancel_animation_frame: function(id) {
+    cancelAnimationFrame(id);
   }
 };
 
