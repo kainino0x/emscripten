@@ -15,7 +15,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
 
 from .toolchain_profiler import ToolchainProfiler
 from .tempfiles import try_delete
@@ -38,8 +37,8 @@ class FatalError(Exception):
   pass
 
 
-def exit_with_error(*args):
-  logging.error(*args)
+def exit_with_error(msg, *args):
+  logging.error(msg, *args)
   sys.exit(1)
 
 
@@ -273,7 +272,6 @@ else:
     sys.exit(0)
 
 # The following globals can be overridden by the config file.
-EMSCRIPTEN_ROOT = __rootpath__
 NODE_JS = None
 BINARYEN_ROOT = None
 EM_POPEN_WORKAROUND = None
@@ -295,14 +293,6 @@ try:
 except Exception as e:
   logging.error('Error in evaluating %s (at %s): %s, text: %s' % (EM_CONFIG, CONFIG_FILE, str(e), config_text))
   sys.exit(1)
-
-# EMSCRIPTEN_ROOT is set in the config file so that external tools such as
-# scons can find emscripten by looking at the config.  Although its not used
-# within emscripten itself this is good to time sanity check the value.
-EMSCRIPTEN_ROOT = os.path.expanduser(os.path.normpath(EMSCRIPTEN_ROOT))
-if os.path.realpath(EMSCRIPTEN_ROOT) != os.path.realpath(__rootpath__):
-  logging.warning('Incorrect EMSCRIPTEN_ROOT in config file: %s (Expected %s)', EMSCRIPTEN_ROOT, __rootpath__)
-
 
 # Returns a suggestion where current .emscripten config file might be located
 # (if EM_CONFIG env. var is used without a file, this hints to "default"
@@ -355,7 +345,7 @@ else:
 # 1: Log stderr of subprocess spawns.
 # 2: Log stdout and stderr of subprocess spawns. Print out subprocess commands that were executed.
 # 3: Log stdout and stderr, and pass VERBOSE=1 to CMake configure steps.
-EM_BUILD_VERBOSE_LEVEL = int(os.getenv('EM_BUILD_VERBOSE', '0'))
+EM_BUILD_VERBOSE = int(os.getenv('EM_BUILD_VERBOSE', '0'))
 
 # Expectations
 
@@ -364,7 +354,7 @@ actual_clang_version = None
 
 def expected_llvm_version():
   if get_llvm_target() == WASM_TARGET:
-    return "7.0"
+    return "8.0"
   else:
     return "6.0"
 
@@ -1349,7 +1339,13 @@ def verify_settings():
       exit_with_error('emcc: CYBERDWARF is not supported by the LLVM wasm backend')
 
     if Settings.EMTERPRETIFY:
-      exit_with_error('emcc: EMTERPRETIFY is not is not supported by the LLVM wasm backend')
+      exit_with_error('emcc: EMTERPRETIFY is not supported by the LLVM wasm backend')
+
+    if not os.path.exists(WASM_LD) or run_process([WASM_LD, '--version'], stdout=PIPE, stderr=PIPE, check=False).returncode != 0:
+      exit_with_error('WASM_BACKEND selected but could not find lld (wasm-ld): %s', WASM_LD)
+
+    if Settings.SIDE_MODULE or Settings.MAIN_MODULE:
+      exit_with_error('emcc: MAIN_MODULE and SIDE_MODULE are not yet supported by the LLVM wasm backend')
 
 
 Settings = SettingsManager()
@@ -1455,7 +1451,7 @@ class Building(object):
 
   @staticmethod
   def get_num_cores():
-    return int(os.environ.get('EMCC_CORES') or multiprocessing.cpu_count())
+    return int(os.environ.get('EMCC_CORES', multiprocessing.cpu_count()))
 
   # Multiprocessing pools are very slow to build up and tear down, and having several pools throughout
   # the application has a problem of overallocating child processes. Therefore maintain a single
@@ -1680,11 +1676,11 @@ class Building(object):
       # do builds natively with Clang. This is a heuristic emulation that may or may not work.
       env['EMMAKEN_JUST_CONFIGURE'] = '1'
     try:
-      if EM_BUILD_VERBOSE_LEVEL >= 3:
+      if EM_BUILD_VERBOSE >= 3:
         print('configure: ' + str(args), file=sys.stderr)
-      if EM_BUILD_VERBOSE_LEVEL >= 2:
+      if EM_BUILD_VERBOSE >= 2:
         stdout = None
-      if EM_BUILD_VERBOSE_LEVEL >= 1:
+      if EM_BUILD_VERBOSE >= 1:
         stderr = None
       res = run_process(args, check=False, stdout=stdout, stderr=stderr, env=env)
     except Exception:
@@ -1716,11 +1712,11 @@ class Building(object):
 
     try:
       # On Windows, run the execution through shell to get PATH expansion and executable extension lookup, e.g. 'sdl2-config' will match with 'sdl2-config.bat' in PATH.
-      if EM_BUILD_VERBOSE_LEVEL >= 3:
+      if EM_BUILD_VERBOSE >= 3:
         print('make: ' + str(args), file=sys.stderr)
-      if EM_BUILD_VERBOSE_LEVEL >= 2:
+      if EM_BUILD_VERBOSE >= 2:
         stdout = None
-      if EM_BUILD_VERBOSE_LEVEL >= 1:
+      if EM_BUILD_VERBOSE >= 1:
         stderr = None
       res = run_process(args, stdout=stdout, stderr=stderr, env=env, shell=WINDOWS, check=False)
     except Exception:
@@ -1783,11 +1779,11 @@ class Building(object):
     if configure:
       # Useful in debugging sometimes to comment this out (and the lines below
       # up to and including the |link| call)
-      if EM_BUILD_VERBOSE_LEVEL < 2:
+      if EM_BUILD_VERBOSE < 2:
         stdout = open(os.path.join(project_dir, 'configure_out'), 'w')
       else:
         stdout = None
-      if EM_BUILD_VERBOSE_LEVEL < 1:
+      if EM_BUILD_VERBOSE < 1:
         stderr = open(os.path.join(project_dir, 'configure_err'), 'w')
       else:
         stderr = None
@@ -1802,15 +1798,15 @@ class Building(object):
     def open_make_err(i, mode='r'):
       return open(os.path.join(project_dir, 'make_err' + str(i)), mode)
 
-    if EM_BUILD_VERBOSE_LEVEL >= 3:
+    if EM_BUILD_VERBOSE >= 3:
       make_args += ['VERBOSE=1']
 
     # FIXME: Sad workaround for some build systems that need to be run twice to succeed (e.g. poppler)
     for i in range(2):
       with open_make_out(i, 'w') as make_out:
         with open_make_err(i, 'w') as make_err:
-          stdout = make_out if EM_BUILD_VERBOSE_LEVEL < 2 else None
-          stderr = make_err if EM_BUILD_VERBOSE_LEVEL < 1 else None
+          stdout = make_out if EM_BUILD_VERBOSE < 2 else None
+          stderr = make_err if EM_BUILD_VERBOSE < 1 else None
           try:
             Building.make(make + make_args, stdout=stdout, stderr=stderr, env=env)
           except subprocess.CalledProcessError as e:
@@ -1824,7 +1820,7 @@ class Building(object):
         break
       except Exception as e:
         if i > 0:
-          if EM_BUILD_VERBOSE_LEVEL == 0:
+          if EM_BUILD_VERBOSE == 0:
             # Due to the ugly hack above our best guess is to output the first run
             with open_make_err(0) as ferr:
               for line in ferr:
@@ -1899,9 +1895,8 @@ class Building(object):
 
   @staticmethod
   def llvm_backend_args():
-    args = ['-thread-model=single'] # no threads support in backend, tell llc to not emit atomics
     # disable slow and relatively unimportant optimization passes
-    args += ['-combiner-global-alias-analysis=false']
+    args = ['-combiner-global-alias-analysis=false']
 
     # asm.js-style exception handling
     if Settings.DISABLE_EXCEPTION_CATCHING != 1:
@@ -1954,12 +1949,7 @@ class Building(object):
         cmd += ['--export', export[1:]] # Strip the leading underscore
 
     logging.debug('emcc: lld-linking: %s to %s', files, target)
-    t = time.time()
     check_call(cmd)
-    if DEBUG:
-      logging.debug('  emscript: lld took %s seconds' % (time.time() - t))
-      t = time.time()
-
     return target
 
   @staticmethod
@@ -2607,6 +2597,11 @@ class Building(object):
       return b[20] == ord('B') and b[21] == ord('C')
 
     return False
+
+  @staticmethod
+  def is_wasm(filename):
+    magic = bytearray(open(filename, 'rb').read(4))
+    return magic == '\0asm'
 
   @staticmethod
   # Given the name of a special Emscripten-implemented system library, returns an array of absolute paths to JS library

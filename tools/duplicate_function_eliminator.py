@@ -43,7 +43,7 @@ def run_on_chunk(command):
       print('running DFE command', ' '.join([c if c != filename else saved for c in command]), file=sys.stderr)
       shutil.copyfile(filename, os.path.join(shared.get_emscripten_temp_dir(), saved))
 
-    if shared.EM_BUILD_VERBOSE_LEVEL >= 3: print('run_on_chunk: ' + str(command), file=sys.stderr)
+    if shared.EM_BUILD_VERBOSE >= 3: print('run_on_chunk: ' + str(command), file=sys.stderr)
 
     proc = shared.run_process(command, stdout=subprocess.PIPE)
     output = proc.stdout
@@ -217,7 +217,7 @@ def run_on_js(filename, gen_hash_info=False):
 
   # if we are making source maps, we want our debug numbering to start from the
   # top of the file, so avoid breaking the JS into chunks
-  cores = int(os.environ.get('EMCC_CORES') or multiprocessing.cpu_count())
+  cores = shared.Building.get_num_cores()
 
   intended_num_chunks = int(round(cores * NUM_CHUNKS_PER_CORE))
   chunk_size = min(MAX_CHUNK_SIZE, max(MIN_CHUNK_SIZE, total_size / intended_num_chunks))

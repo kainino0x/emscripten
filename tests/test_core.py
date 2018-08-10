@@ -1,14 +1,24 @@
 # coding=utf-8
 
 from __future__ import print_function
-import glob, hashlib, os, re, shutil, subprocess, sys, json, random
+import glob
+import hashlib
 import json
+import os
+import random
+import re
+import shutil
+import subprocess
+import sys
+import time
 import unittest
 from textwrap import dedent
+
 import tools.shared
 from tools.shared import *
 from tools.line_endings import check_line_endings
 from runner import RunnerCore, path_from_root, checked_sanity, core_test_modes, get_zlib_library, get_bullet_library
+from runner import skip_if, no_wasm_backend
 
 # decorators for limiting which modes a test can run in
 
@@ -20,25 +30,12 @@ def SIMD(f):
     f(self)
   return decorated
 
-# Generic decorator that calls a function named 'condition' on the test class and
-# skips the test if that function returns true
-def skip_if(func, condition, explanation=''):
-  explanation_str = ' : %s' % explanation if explanation else ''
-  def decorated(self):
-    if self.__getattribute__(condition)():
-      return self.skipTest(condition + explanation_str)
-    return func(self)
-  return decorated
-
 def no_emterpreter(f):
   return skip_if(f, 'is_emterpreter')
 
-def no_wasm(f):
-  return skip_if(f, 'is_wasm')
-
-def no_wasm_backend(note=''):
+def no_wasm(note=''):
   def decorated(f):
-    return skip_if(f, 'is_wasm_backend', note)
+    return skip_if(f, 'is_wasm', note)
   return decorated
 
 def no_linux(note=''):
@@ -882,7 +879,7 @@ base align: 0, 0, 0, 0'''])
       }
     '''
     for num in [1, 5, 20, 1000]:
-      print(num)
+      print('NUM=%d' % num)
       self.do_run(src.replace('NUM', str(num)), '0\n' * num)
 
   def test_setjmp_many_2(self):
@@ -1513,7 +1510,7 @@ int main() {
     self.do_run_in_out_file_test('tests', 'core', 'test_stack_void')
 
   # Fails in wasm because of excessive slowness in the wasm-shell
-  @no_wasm
+  @no_wasm()
   def test_life(self):
     self.emcc_args += ['-std=c99']
     src = open(path_from_root('tests', 'life.c'), 'r').read()
@@ -4729,9 +4726,8 @@ def process(filename):
       self.set_setting('LINKABLE', linkable)
       self.do_run_from_file(src, output)
 
-  @no_wasm
+  @no_wasm('wasm libc overlaps js lib, so no INCLUDE_FULL_LIBRARY')
   def test_fs_base(self):
-    if self.is_wasm(): self.skipTest('wasm libc overlaps js lib, so no INCLUDE_FULL_LIBRARY')
     self.set_setting('INCLUDE_FULL_LIBRARY', 1)
     Settings.INCLUDE_FULL_LIBRARY = 1
     try:
@@ -6187,6 +6183,8 @@ def process(filename):
     Building.llvm_dis(filename)
 
   def test_autodebug(self):
+    if self.get_setting('WASM_OBJECT_FILES'):
+      self.skipTest('autodebugging only works with bitcode objects')
     if Building.LLVM_OPTS:
       self.skipTest('LLVM opts mess us up')
     Building.COMPILER_TEST_OPTS += ['--llvm-opts', '0']
@@ -6514,7 +6512,8 @@ def process(filename):
 
   def test_response_file(self):
     with open('rsp_file', 'w') as f:
-      f.write('-o %s/response_file.o.js %s' % (self.get_dir(), path_from_root('tests', 'hello_world.cpp')))
+      response_data = '-o %s/response_file.o.js %s' % (self.get_dir(), path_from_root('tests', 'hello_world.cpp'))
+      f.write(response_data.replace('\\', '\\\\'))
     run_process([PYTHON, EMCC, "@rsp_file"] + self.emcc_args)
     self.do_run('' , 'hello, world', basename='response_file', no_build=True)
 
@@ -6525,7 +6524,8 @@ def process(filename):
     # by emscripten, except when using the wasm backend (lld) in which case it
     # should pass the original flag to the linker.
     with open('rsp_file', 'w') as f:
-      f.write(objfile + ' --export=foo')
+      response_data = objfile + ' --export=foo'
+      f.write(response_data.replace('\\', '\\\\'))
     run_process([PYTHON, EMCC, "-Wl,@rsp_file", '-o', os.path.join(self.get_dir(), 'response_file.o.js')] + self.emcc_args)
     self.do_run('' , 'hello, world', basename='response_file', no_build=True)
 
@@ -6697,8 +6697,10 @@ def process(filename):
 
     self.do_run_in_out_file_test('tests', 'core', 'test_tracing')
 
+  @no_wasm_backend('EVAL_CTORS does not work with wasm backend')
   def test_eval_ctors(self):
-    if '-O2' not in str(self.emcc_args) or '-O1' in str(self.emcc_args): self.skipTest('need js optimizations')
+    if '-O2' not in str(self.emcc_args) or '-O1' in str(self.emcc_args):
+      self.skipTest('need js optimizations')
 
     orig_args = self.emcc_args[:] + ['-s', 'EVAL_CTORS=0']
 
@@ -6713,30 +6715,38 @@ def process(filename):
       int main() {}
     ''', "constructing!\n");
 
-    code_file = 'src.cpp.o.js' if not self.get_setting('WASM') else 'src.cpp.o.wasm'
+
+    def get_code_size():
+      if self.is_wasm():
+        # Use number of functions as a for code size
+        return self.count_wasm_contents('src.cpp.o.wasm', 'funcs')
+      else:
+        return os.path.getsize('src.cpp.o.js')
+
+    def get_mem_size():
+      if self.is_wasm():
+        # Use number of functions as a for code size
+        return self.count_wasm_contents('src.cpp.o.wasm', 'memory-data')
+      if self.uses_memory_init_file():
+        return os.path.getsize('src.cpp.o.js.mem')
+
+      # otherwise we ignore memory size
+      return 0
 
     def do_test(test):
       self.emcc_args = orig_args + ['-s', 'EVAL_CTORS=1']
       test()
-      ec_code_size = os.stat(code_file).st_size
-      if self.uses_memory_init_file():
-        ec_mem_size = os.stat('src.cpp.o.js.mem').st_size
+      ec_code_size = get_code_size()
+      ec_mem_size = get_mem_size()
       self.emcc_args = orig_args[:]
       test()
-      code_size = os.stat(code_file).st_size
-      if self.uses_memory_init_file():
-        mem_size = os.stat('src.cpp.o.js.mem').st_size
-      # if we are wasm, then the mem init is inside the wasm too, so the total change in code+data may grow *or* shrink
-      code_size_should_shrink = not self.is_wasm()
-      print(code_size, ' => ', ec_code_size, ', are we testing code size?', code_size_should_shrink)
-      if self.uses_memory_init_file():
-        print(mem_size, ' => ', ec_mem_size)
-      if code_size_should_shrink:
-        assert ec_code_size < code_size
-      else:
-        assert ec_code_size != code_size, 'should at least change'
-      if self.uses_memory_init_file():
-        assert ec_mem_size > mem_size
+      code_size = get_code_size()
+      mem_size = get_mem_size()
+      if mem_size:
+        print('mem: ', mem_size, '=>', ec_mem_size)
+        self.assertGreater(ec_mem_size, mem_size)
+      print('code:', code_size, '=>', ec_code_size)
+      self.assertLess(ec_code_size, code_size)
 
     print('remove ctor of just assigns to memory')
     def test1():
@@ -6772,6 +6782,7 @@ def process(filename):
     self.set_setting('ASSERTIONS', 0)
 
     print('remove just some, leave others')
+
     def test3():
       self.do_run(r'''
 #include <iostream>
@@ -7187,8 +7198,8 @@ err = err = function(){};
       self.do_run_in_out_file_test('tests', 'core', 'modularize_closure_pre', post_build=post)
 
   @no_emterpreter
+  @no_wasm('wasmifying destroys debug info and stack tracability')
   def test_exception_source_map(self):
-    if self.is_wasm(): self.skipTest('wasmifying destroys debug info and stack tracability')
     self.emcc_args.append('-g4')
     if not jsrun.check_engine(NODE_JS): self.skipTest('sourcemapper requires Node to run')
 
@@ -7228,8 +7239,8 @@ err = err = function(){};
     dirname = self.get_dir()
     self.build(src, dirname, os.path.join(dirname, 'src.cpp'), post_build=post)
 
+  @no_wasm('wasmifying destroys debug info and stack tracability')
   def test_emscripten_log(self):
-    if self.is_wasm(): self.skipTest('wasmifying destroys debug info and stack tracability')
     self.banned_js_engines = [V8_ENGINE] # v8 doesn't support console.log
     self.emcc_args += ['-s', 'DEMANGLE_SUPPORT=1']
     if self.is_emterpreter():
@@ -7881,6 +7892,14 @@ binaryen2 = make_run('binaryen2', emcc_args=['-O2'])
 binaryen3 = make_run('binaryen3', emcc_args=['-O3'])
 binaryens = make_run('binaryens', emcc_args=['-Os'])
 binaryenz = make_run('binaryenz', emcc_args=['-Oz'])
+
+wasmobj0 = make_run('wasmobj0', emcc_args=['-O0', '-s', 'WASM_OBJECT_FILES=1'])
+wasmobj1 = make_run('wasmobj1', emcc_args=['-O1', '-s', 'WASM_OBJECT_FILES=1'])
+wasmobj2 = make_run('wasmobj2', emcc_args=['-O2', '-s', 'WASM_OBJECT_FILES=1'])
+wasmobj3 = make_run('wasmobj3', emcc_args=['-O3', '-s', 'WASM_OBJECT_FILES=1'])
+wasmobjs = make_run('wasmobjs', emcc_args=['-Os', '-s', 'WASM_OBJECT_FILES=1'])
+wasmobjz = make_run('wasmobjz', emcc_args=['-Oz', '-s', 'WASM_OBJECT_FILES=1'])
+
 
 # Secondary test modes - run directly when there is a specific need
 
