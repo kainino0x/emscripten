@@ -283,6 +283,8 @@ var WEBSOCKET_SUBPROTOCOL = 'binary'; // A string containing a comma separated l
 
 var WEBSOCKET_DEBUG = 0; // If 1, prints out debugging related to WebSockets calls. If 2, traces bytes communicated via the socket.
 
+var PROXY_POSIX_SOCKETS = 0; // If 1, the POSIX sockets API uses a proxy bridge to proxy sockets calls
+
 var OPENAL_DEBUG = 0; // Print out debugging information from our OpenAL implementation.
 
 var GL_ASSERTIONS = 0; // Adds extra checks for error situations in the GL library. Can impact performance.
