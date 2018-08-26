@@ -142,8 +142,8 @@ def calculate(temp_files, in_temp, stdout_, stderr_, forced=[]):
 
     # individual files
     blacklist += [
-        'memcpy.c', 'memset.c', 'memmove.c', 'getaddrinfo.c', 'getnameinfo.c',
-        'inet_addr.c', 'res_query.c', 'gai_strerror.c', 'proto.c',
+        'memcpy.c', 'memset.c', 'memmove.c', 'getaddrinfo.c', 'freeaddrinfo.c',
+        'getnameinfo.c', 'res_query.c', 'gai_strerror.c', 'proto.c',
         'gethostbyaddr.c', 'gethostbyaddr_r.c', 'gethostbyname.c',
         'gethostbyname2_r.c', 'gethostbyname_r.c', 'gethostbyname2.c',
         'usleep.c', 'alarm.c', 'syscall.c', '_exit.c', 'popen.c',
