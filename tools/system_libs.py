@@ -146,12 +146,13 @@ def calculate(temp_files, in_temp, stdout_, stderr_, forced=[]):
         'getnameinfo.c', 'res_query.c', 'gai_strerror.c', 'proto.c',
         'gethostbyaddr.c', 'gethostbyaddr_r.c', 'gethostbyname.c',
         'gethostbyname2_r.c', 'gethostbyname_r.c', 'gethostbyname2.c',
-        'usleep.c', 'alarm.c', 'syscall.c', '_exit.c', 'popen.c',
+        'usleep.c', 'alarm.c', 'syscall.c', '_exit.c', 'popen.c'
+#        ,
 
-        'socket.c', 'socketpair.c', 'shutdown.c', 'bind.c', 'connect.c',
-        'listen.c', 'accept.c', 'getsockname.c', 'getpeername.c', 'send.c',
-        'recv.c', 'sendto.c', 'recvfrom.c', 'sendmsg.c', 'recvmsg.c',
-        'getsockopt.c', 'setsockopt.c'
+#        'socket.c', 'socketpair.c', 'shutdown.c', 'bind.c', 'connect.c',
+#        'listen.c', 'accept.c', 'getsockname.c', 'getpeername.c', 'send.c',
+#        'recv.c', 'sendto.c', 'recvfrom.c', 'sendmsg.c', 'recvmsg.c',
+#        'getsockopt.c', 'setsockopt.c'
     ]
 
     # individual math files
