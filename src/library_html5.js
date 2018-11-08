@@ -188,6 +188,7 @@ var LibraryJSEvents = {
     },
     
     registerOrRemoveHandler: function(eventHandler) {
+      if (!ENVIRONMENT_IS_WEB) return; // TODO(kainino0x): Doesn't work on a Worker.
       var jsEventHandler = function jsEventHandler(event) {
         // Increment nesting count for the event handler.
         ++JSEvents.inEventHandler;
@@ -506,6 +507,7 @@ var LibraryJSEvents = {
       if (!JSEvents.focusEvent) JSEvents.focusEvent = _malloc( {{{ C_STRUCTS.EmscriptenFocusEvent.__size__ }}} );
 
       var focusEventHandlerFunc = function(event) {
+        return; // TODO(kainino0x): this is broken: focusEvent not defined in stringToUTF8 below
         var e = event || window.event;
 
         var nodeName = JSEvents.getNodeNameForTarget(e.target);
@@ -1315,6 +1317,7 @@ var LibraryJSEvents = {
   emscripten_set_wheel_callback_on_thread__proxy: 'sync',
   emscripten_set_wheel_callback_on_thread__sig: 'iiiiii',
   emscripten_set_wheel_callback_on_thread: function(target, userData, useCapture, callbackfunc, targetThread) {
+    if (!ENVIRONMENT_IS_WEB) return; // TODO(kainino0x): Doesn't work on a Worker.
     target = JSEvents.findEventTarget(target);
     if (typeof target.onwheel !== 'undefined') {
       JSEvents.registerWheelEventCallback(target, userData, useCapture, callbackfunc, {{{ cDefine('EMSCRIPTEN_EVENT_WHEEL') }}}, "wheel", targetThread);
