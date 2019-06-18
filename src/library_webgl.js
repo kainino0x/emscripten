@@ -1349,6 +1349,7 @@ var LibraryGL = {
 
   $emscriptenWebGLGetTexPixelData__deps: ['_computeUnpackAlignedImageSize', '_colorChannelsInGlTextureFormat', '_sizeOfGlTextureElementType'],
   $emscriptenWebGLGetTexPixelData: function(type, format, width, height, pixels, internalFormat) {
+    if (pixels === null) return null;
     var sizePerPixel = __colorChannelsInGlTextureFormat[format] * __sizeOfGlTextureElementType[type];
     if (!sizePerPixel) {
       GL.recordError(0x0500); // GL_INVALID_ENUM
@@ -1356,7 +1357,7 @@ var LibraryGL = {
       if (!__colorChannelsInGlTextureFormat[format]) err('GL_INVALID_ENUM due to unknown format in glTex[Sub]Image/glReadPixels, format: ' + format);
       else err('GL_INVALID_ENUM in glTex[Sub]Image/glReadPixels, type: ' + type + ', format: ' + format);
 #endif
-      return;
+      throw 0;
     }
     var bytes = __computeUnpackAlignedImageSize(width, height, sizePerPixel, GL.unpackAlignment);
     var end = pixels + bytes;
@@ -1454,13 +1455,9 @@ var LibraryGL = {
       return;
     }
 #endif
-    var pixelData = null;
-    if (pixels) {
-      pixelData = emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, internalFormat);
-      if (!pixelData)
-        return;
-    }
-    GLctx.texImage2D(target, level, internalFormat, width, height, border, format, type, pixelData);
+    try {
+      GLctx.texImage2D(target, level, internalFormat, width, height, border, format, type, emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, internalFormat));
+    } catch (e) {}
   },
 
   glTexSubImage2D__sig: 'viiiiiiiii',
@@ -1491,13 +1488,9 @@ var LibraryGL = {
       return;
     }
 #endif
-    var pixelData = null;
-    if (pixels) {
-      pixelData = emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, 0);
-      if (!pixelData)
-        return;
-    }
-    GLctx.texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixelData);
+    try {
+      GLctx.texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, internalFormat));
+    } catch (e) {}
   },
 
   glReadPixels__sig: 'viiiiiii',
@@ -1517,10 +1510,9 @@ var LibraryGL = {
       return;
     }
 #endif
-    var pixelData = emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, format);
-    if (!pixelData)
-      return;
-    GLctx.readPixels(x, y, width, height, format, type, pixelData);
+    try {
+      GLctx.readPixels(x, y, width, height, format, type, emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, internalFormat));
+    } catch (e) {}
   },
 
   glBindTexture__sig: 'vii',
