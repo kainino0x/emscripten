@@ -503,6 +503,11 @@ extern void *emscripten_webgl2_get_proc_address(const char *name);
 // Combines emscripten_webgl1_get_proc_address() and emscripten_webgl2_get_proc_address() to return function pointers to both WebGL1 and WebGL2 functions. Same drawbacks apply.
 extern void *emscripten_webgl_get_proc_address(const char *name);
 
+typedef struct DawnDeviceImpl* DawnDevice;
+
+extern DawnDevice emscripten_webgpu_create_device();
+extern EMSCRIPTEN_RESULT emscripten_webgpu_destroy_device(DawnDevice device);
+
 extern EMSCRIPTEN_RESULT emscripten_set_canvas_element_size(const char *target, int width, int height);
 extern EMSCRIPTEN_RESULT emscripten_get_canvas_element_size(const char *target, int *width, int *height);
 

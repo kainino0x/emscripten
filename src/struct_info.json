@@ -1615,5 +1615,19 @@
             "EMSCRIPTEN_FETCH_SYNCHRONOUS",
             "EMSCRIPTEN_FETCH_WAITABLE"
         ]
+    },
+    // ===========================================
+    // WebGPU
+    // ===========================================
+    {
+        "file": "dawn/dawn.h",
+        "defines": [],
+        "structs": {
+            "DawnBufferDescriptor": [
+                "nextInChain",
+                "usage",
+                "size"
+            ]
+        }
     }
  ]
