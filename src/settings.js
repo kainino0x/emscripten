@@ -441,7 +441,7 @@ var GL_FFP_ONLY = 0;
 var GL_PREINITIALIZED_CONTEXT = 0;
 
 // If true, enables WebGPU support via dawn.h.
-var WEBGPU = 0;
+var USE_WEBGPU = 0;
 
 // Enables building of stb-image, a tiny public-domain library for decoding
 // images, allowing decoding of images without using the browser's built-in

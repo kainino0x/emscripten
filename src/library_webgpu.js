@@ -8,19 +8,115 @@
  */
 var LibraryWebGPU = {
   $WebGPU: {
-    buffers: {
-      nextId: 1,
-      objects: []
+    makeManager: function() {
+      return {
+        objects: [null],
+        create: function(object) {
+          var id = this.objects.length;
+#if ASSERTIONS
+          assert(typeof this.objects[id] === 'undefined');
+#endif
+          this.objects[id] = { refcount: 1, object };
+          return id;
+        },
+        get: function(id) {
+#if ASSERTIONS
+          assert(typeof this.objects[id] !== 'undefined');
+#endif
+          return this.objects[id].object;
+        },
+        reference: function(id) {
+          var o = this.objects[id];
+#if ASSERTIONS
+          assert(typeof o !== 'undefined');
+#endif
+          this.objects[id].refcount++;
+        },
+        release: function(id) {
+          var o = this.objects[id];
+#if ASSERTIONS
+          assert(typeof o !== 'undefined');
+          assert(o.refcount > 0);
+#endif
+          o.refcount--;
+          if (o.refcount <= 0) {
+            delete this.objects[id];
+          }
+        },
+      };
     },
+    {{{ (function() {
+      var mgrTypes = [
+        'Device',
+        'Queue',
+        'Buffer',
+        'Texture',
+        'CommandBuffer',
+        'CommandEncoder',
+      ];
+      var s = '';
+      for (var i = 0; i < mgrTypes.length; ++i) {
+        var type = mgrTypes[i];
+        s += 'mgr' + type + ': function() {\n';
+        s += '  return this._mgr' + type + ' || (this._mgr' + type + ' = this.makeManager());\n';
+        s += '},\n';
+      }
+      return s;
+    })() }}}
   },
 
-  dawnDeviceRelease: function() {
-    console.warn("dawnDeviceRelease not implemented");
+  // *Reference/*Release
+
+  {{{ (function() {
+    var rcTypes = [
+      'Device',
+      'Queue',
+      'Buffer',
+      'Texture',
+      'CommandBuffer',
+      'CommandEncoder',
+    ];
+    var s = '';
+    for (var i = 0; i < rcTypes.length; ++i) {
+      var type = rcTypes[i];
+      s += 'dawn' + type + 'Reference: function(id) {\n';
+      s += '  WebGPU.mgr' + type + '().reference(id);\n'
+      s += '},\n';
+      s += 'dawn' + type + 'Release: function(id) {\n';
+      s += '  WebGPU.mgr' + type + '().release(id);\n'
+      s += '},\n';
+    }
+    return s;
+  })() }}}
+
+  // *Destroy
+
+  dawnBufferDestroy: function(bufferId) { WebGPU.mgrBuffer().get(bufferId).destroy(); },
+  dawnTextureDestroy: function(textureId) { WebGPU.mgrTexture().get(textureId).destroy(); },
+
+  // dawnDevice
+
+  // dawnDeviceCreate*
+
+  dawnDeviceCreateQueue: function(deviceId) {
+    assert(WebGPU.mgrQueue().objects.length === 1, 'there is only one queue');
+    var device = WebGPU.mgrDevice().get(deviceId);
+    return WebGPU.mgrQueue().create(device.getQueue());
+  },
+
+  dawnDeviceCreateCommandEncoder: function(deviceId, descriptor) {
+#if ASSERTIONS
+    if (descriptor) {
+      var nextInChain = {{{ makeGetValue('descriptor', C_STRUCTS.DawnCommandEncoderDescriptor.nextInChain, '*') }}};
+      assert(nextInChain === nullptr);
+    }
+#endif
+    var device = WebGPU.mgrDevice().get(deviceId);
+    return WebGPU.mgrCommandEncoder().create(device.createCommandEncoder());
   },
 
   dawnDeviceCreateBuffer: function(deviceId, descriptor) {
 #if ASSERTIONS
-    assert(deviceId === 1);
     assert(descriptor !== 0);
     var nextInChain = {{{ makeGetValue('descriptor', C_STRUCTS.DawnBufferDescriptor.nextInChain, '*') }}};
     assert(nextInChain === 0);
@@ -30,40 +126,53 @@ var LibraryWebGPU = {
       size: {{{ makeGetValue('descriptor', C_STRUCTS.DawnBufferDescriptor.size, 'i64') }}},
     };
 
-    var buffer = Module['preinitializedWebGPUDevice'].createBuffer(desc);
-
-    var id = WebGPU.buffers.nextId;
-    WebGPU.buffers.nextId++;
-    WebGPU.buffers.objects[id] = { refcount: 1, object: buffer };
-    return id;
+    var device = WebGPU.mgrDevice().get(deviceId);
+    return WebGPU.mgrBuffer().create(device.createBuffer(desc));
   },
 
-  dawnBufferRelease: function(bufferId) {
-    var b = WebGPU.buffers.objects[bufferId];
-    b.refcount--;
-    if (b.refcount === 0) {
-      WebGPU.buffers.objects[bufferId] = undefined;
-    }
+  // dawnQueue
+
+  dawnQueueSubmit: function(queueId, commandCount, commands) {
+#if ASSERTIONS
+    assert(commands % 4 === 0);
+#endif
+    var queue = WebGPU.mgrQueue().get(queueId);
+    var cmds = Array.from(HEAP32.subarray(commands >> 2, (commands >> 2) + commandCount),
+      function(id) { return WebGPU.mgrCommandBuffer().get(id); });
+    queue.submit(cmds);
   },
+
+  // dawnCommandEncoder
+
+  dawnCommandEncoderFinish: function(commandEncoderId) {
+    var commandEncoder = WebGPU.mgrCommandEncoder().get(commandEncoderId);
+    return WebGPU.mgrCommandBuffer().create(commandEncoder.finish());
+  },
+
+  dawnCommandEncoderCopyBufferToBuffer: function(commandEncoderId, srcId, srcOffset_l, srcOffset_h, dstId, dstOffset_l, dstOffset_h, size_l, size_h) {
+    var commandEncoder = WebGPU.mgrCommandEncoder().get(commandEncoderId);
+    var src = WebGPU.mgrBuffer().get(srcId);
+    var dst = WebGPU.mgrBuffer().get(dstId);
+    commandEncoder.copyBufferToBuffer(
+      src, {{{ makeU64ToNumber('srcOffset_h', 'srcOffset_l') }}},
+      dst, {{{ makeU64ToNumber('dstOffset_h', 'dstOffset_l') }}},
+      {{{ makeU64ToNumber('size_h', 'size_l') }}});
+  },
+
+  // dawnBuffer
 
   dawnBufferSetSubData: function(bufferId, start_l, start_h, count_l, count_h, data) {
-    var buffer = WebGPU.buffers.objects[bufferId].object;
-#if ASSERTIONS
-    assert(buffer);
-    assert(start_h < 0x200000);
-    assert(count_h < 0x200000);
-#endif
-    var start = start_h * 0x100000000 + start_l;
-    var count = count_h * 0x100000000 + count_l;
+    var buffer = WebGPU.mgrBuffer().get(bufferId);
+    var start = {{{ makeU64ToNumber('start_h', 'start_l') }}};
+    var count = {{{ makeU64ToNumber('count_h', 'count_l') }}};
     buffer.setSubData(start, HEAPU8, data, count);
   },
 
   dawnBufferMapReadAsync: function(bufferId, callback, userdata) {
-    var buffer = WebGPU.buffers.objects[bufferId].object;
-#if ASSERTIONS
-    assert(buffer);
-    assert(callback);
-#endif
+    var bufferEntry = WebGPU.mgrBuffer().objects[bufferId];
+    bufferEntry.mapped = 'write';
+    var buffer = bufferEntry.object;
+
     buffer.mapReadAsync().then(function(mapped) {
       var DAWN_BUFFER_MAP_ASYNC_STATUS_SUCCESS = 0;
       var data = _malloc(mapped.byteLength);
@@ -77,8 +186,38 @@ var LibraryWebGPU = {
       dynCall('viiji', callback, [DAWN_BUFFER_MAP_ASYNC_STATUS_ERROR, 0, 0, 0, userdata]);
     });
   },
+
+  dawnBufferMapWriteAsync: function(bufferId, callback, userdata) {
+    var e = WebGPU.mgrBuffer().objects[bufferId];
+    var buffer = e.object;
+
+    buffer.mapWriteAsync().then(function(mapped) {
+      var DAWN_BUFFER_MAP_ASYNC_STATUS_SUCCESS = 0;
+      var data = _malloc(mapped.byteLength);
+      HEAP8.fill(0, data, mapped.byteLength);
+      e.mapWriteSrc = data;
+      e.mapWriteDst = mapped;
+
+      var dataLength_h = (mapped.byteLength / 0x100000000) | 0;
+      var dataLength_l = mapped.byteLength | 0;
+      dynCall('viiji', callback, [DAWN_BUFFER_MAP_ASYNC_STATUS_SUCCESS, data, dataLength_l, dataLength_h, userdata]);
+    }, function() {
+      // TODO(kainino0x): Figure out how to pick other error status values.
+      var DAWN_BUFFER_MAP_ASYNC_STATUS_ERROR = 1;
+      dynCall('viiji', callback, [DAWN_BUFFER_MAP_ASYNC_STATUS_ERROR, 0, 0, 0, userdata]);
+    });
+  },
+
+  dawnBufferUnmap: function(bufferId) {
+    var e = WebGPU.mgrBuffer().objects[bufferId];
+    if (e.mapWriteSrc) {
+      new Uint8Array(e.mapWriteDst).set(HEAP8.subarray(e.mapWriteSrc, e.mapWriteSrc + e.mapWriteDst.byteLength));
+    }
+    e.mapWriteSrc = undefined;
+    e.mapWriteDst = undefined;
+    e.object.unmap();
+  },
 };
 
 autoAddDeps(LibraryWebGPU, '$WebGPU');
-
 mergeInto(LibraryManager.library, LibraryWebGPU);

@@ -216,70 +216,70 @@ typedef enum {
 } DawnTextureDimension;
 
 typedef enum {
-    DAWN_TEXTURE_FORMAT_R8_UNORM = 0x00000000,
-    DAWN_TEXTURE_FORMAT_R8_SNORM = 0x00000001,
-    DAWN_TEXTURE_FORMAT_R8_UINT = 0x00000002,
-    DAWN_TEXTURE_FORMAT_R8_SINT = 0x00000003,
-    DAWN_TEXTURE_FORMAT_R16_UINT = 0x00000004,
-    DAWN_TEXTURE_FORMAT_R16_SINT = 0x00000005,
-    DAWN_TEXTURE_FORMAT_R16_FLOAT = 0x00000006,
-    DAWN_TEXTURE_FORMAT_RG8_UNORM = 0x00000007,
-    DAWN_TEXTURE_FORMAT_RG8_SNORM = 0x00000008,
-    DAWN_TEXTURE_FORMAT_RG8_UINT = 0x00000009,
-    DAWN_TEXTURE_FORMAT_RG8_SINT = 0x0000000A,
-    DAWN_TEXTURE_FORMAT_R32_FLOAT = 0x0000000B,
-    DAWN_TEXTURE_FORMAT_R32_UINT = 0x0000000C,
-    DAWN_TEXTURE_FORMAT_R32_SINT = 0x0000000D,
-    DAWN_TEXTURE_FORMAT_RG16_UINT = 0x0000000E,
-    DAWN_TEXTURE_FORMAT_RG16_SINT = 0x0000000F,
-    DAWN_TEXTURE_FORMAT_RG16_FLOAT = 0x00000010,
-    DAWN_TEXTURE_FORMAT_RGBA8_UNORM = 0x00000011,
-    DAWN_TEXTURE_FORMAT_RGBA8_UNORM_SRGB = 0x00000012,
-    DAWN_TEXTURE_FORMAT_RGBA8_SNORM = 0x00000013,
-    DAWN_TEXTURE_FORMAT_RGBA8_UINT = 0x00000014,
-    DAWN_TEXTURE_FORMAT_RGBA8_SINT = 0x00000015,
-    DAWN_TEXTURE_FORMAT_BGRA8_UNORM = 0x00000016,
-    DAWN_TEXTURE_FORMAT_BGRA8_UNORM_SRGB = 0x00000017,
-    DAWN_TEXTURE_FORMAT_RGB10_A2_UNORM = 0x00000018,
-    DAWN_TEXTURE_FORMAT_RG11_B10_FLOAT = 0x00000019,
-    DAWN_TEXTURE_FORMAT_RG32_FLOAT = 0x0000001A,
-    DAWN_TEXTURE_FORMAT_RG32_UINT = 0x0000001B,
-    DAWN_TEXTURE_FORMAT_RG32_SINT = 0x0000001C,
-    DAWN_TEXTURE_FORMAT_RGBA16_UINT = 0x0000001D,
-    DAWN_TEXTURE_FORMAT_RGBA16_SINT = 0x0000001E,
-    DAWN_TEXTURE_FORMAT_RGBA16_FLOAT = 0x0000001F,
-    DAWN_TEXTURE_FORMAT_RGBA32_FLOAT = 0x00000020,
-    DAWN_TEXTURE_FORMAT_RGBA32_UINT = 0x00000021,
-    DAWN_TEXTURE_FORMAT_RGBA32_SINT = 0x00000022,
-    DAWN_TEXTURE_FORMAT_DEPTH32_FLOAT = 0x00000023,
-    DAWN_TEXTURE_FORMAT_DEPTH24_PLUS = 0x00000024,
-    DAWN_TEXTURE_FORMAT_DEPTH24_PLUS_STENCIL8 = 0x00000025,
-    DAWN_TEXTURE_FORMAT_BC1_RGBA_UNORM = 0x00000026,
-    DAWN_TEXTURE_FORMAT_BC1_RGBA_UNORM_SRGB = 0x00000027,
-    DAWN_TEXTURE_FORMAT_BC2_RGBA_UNORM = 0x00000028,
-    DAWN_TEXTURE_FORMAT_BC2_RGBA_UNORM_SRGB = 0x00000029,
-    DAWN_TEXTURE_FORMAT_BC3_RGBA_UNORM = 0x0000002A,
-    DAWN_TEXTURE_FORMAT_BC3_RGBA_UNORM_SRGB = 0x0000002B,
-    DAWN_TEXTURE_FORMAT_BC4_R_UNORM = 0x0000002C,
-    DAWN_TEXTURE_FORMAT_BC4_R_SNORM = 0x0000002D,
-    DAWN_TEXTURE_FORMAT_BC5_RG_UNORM = 0x0000002E,
-    DAWN_TEXTURE_FORMAT_BC5_RG_SNORM = 0x0000002F,
-    DAWN_TEXTURE_FORMAT_BC6H_RGB_UFLOAT = 0x00000030,
-    DAWN_TEXTURE_FORMAT_BC6H_RGB_SFLOAT = 0x00000031,
-    DAWN_TEXTURE_FORMAT_BC7_RGBA_UNORM = 0x00000032,
-    DAWN_TEXTURE_FORMAT_BC7_RGBA_UNORM_SRGB = 0x00000033,
-    DAWN_TEXTURE_FORMAT_NONE = 0xFFFFFFFF,
+    DAWN_TEXTURE_FORMAT_UNDEFINED = 0x00000000,
+    DAWN_TEXTURE_FORMAT_R8_UNORM = 0x00000001,
+    DAWN_TEXTURE_FORMAT_R8_SNORM = 0x00000002,
+    DAWN_TEXTURE_FORMAT_R8_UINT = 0x00000003,
+    DAWN_TEXTURE_FORMAT_R8_SINT = 0x00000004,
+    DAWN_TEXTURE_FORMAT_R16_UINT = 0x00000005,
+    DAWN_TEXTURE_FORMAT_R16_SINT = 0x00000006,
+    DAWN_TEXTURE_FORMAT_R16_FLOAT = 0x00000007,
+    DAWN_TEXTURE_FORMAT_RG8_UNORM = 0x00000008,
+    DAWN_TEXTURE_FORMAT_RG8_SNORM = 0x00000009,
+    DAWN_TEXTURE_FORMAT_RG8_UINT = 0x0000000A,
+    DAWN_TEXTURE_FORMAT_RG8_SINT = 0x0000000B,
+    DAWN_TEXTURE_FORMAT_R32_FLOAT = 0x0000000C,
+    DAWN_TEXTURE_FORMAT_R32_UINT = 0x0000000D,
+    DAWN_TEXTURE_FORMAT_R32_SINT = 0x0000000E,
+    DAWN_TEXTURE_FORMAT_RG16_UINT = 0x0000000F,
+    DAWN_TEXTURE_FORMAT_RG16_SINT = 0x00000010,
+    DAWN_TEXTURE_FORMAT_RG16_FLOAT = 0x00000011,
+    DAWN_TEXTURE_FORMAT_RGBA8_UNORM = 0x00000012,
+    DAWN_TEXTURE_FORMAT_RGBA8_UNORM_SRGB = 0x00000013,
+    DAWN_TEXTURE_FORMAT_RGBA8_SNORM = 0x00000014,
+    DAWN_TEXTURE_FORMAT_RGBA8_UINT = 0x00000015,
+    DAWN_TEXTURE_FORMAT_RGBA8_SINT = 0x00000016,
+    DAWN_TEXTURE_FORMAT_BGRA8_UNORM = 0x00000017,
+    DAWN_TEXTURE_FORMAT_BGRA8_UNORM_SRGB = 0x00000018,
+    DAWN_TEXTURE_FORMAT_RGB10_A2_UNORM = 0x00000019,
+    DAWN_TEXTURE_FORMAT_RG11_B10_FLOAT = 0x0000001A,
+    DAWN_TEXTURE_FORMAT_RG32_FLOAT = 0x0000001B,
+    DAWN_TEXTURE_FORMAT_RG32_UINT = 0x0000001C,
+    DAWN_TEXTURE_FORMAT_RG32_SINT = 0x0000001D,
+    DAWN_TEXTURE_FORMAT_RGBA16_UINT = 0x0000001E,
+    DAWN_TEXTURE_FORMAT_RGBA16_SINT = 0x0000001F,
+    DAWN_TEXTURE_FORMAT_RGBA16_FLOAT = 0x00000020,
+    DAWN_TEXTURE_FORMAT_RGBA32_FLOAT = 0x00000021,
+    DAWN_TEXTURE_FORMAT_RGBA32_UINT = 0x00000022,
+    DAWN_TEXTURE_FORMAT_RGBA32_SINT = 0x00000023,
+    DAWN_TEXTURE_FORMAT_DEPTH32_FLOAT = 0x00000024,
+    DAWN_TEXTURE_FORMAT_DEPTH24_PLUS = 0x00000025,
+    DAWN_TEXTURE_FORMAT_DEPTH24_PLUS_STENCIL8 = 0x00000026,
+    DAWN_TEXTURE_FORMAT_BC1_RGBA_UNORM = 0x00000027,
+    DAWN_TEXTURE_FORMAT_BC1_RGBA_UNORM_SRGB = 0x00000028,
+    DAWN_TEXTURE_FORMAT_BC2_RGBA_UNORM = 0x00000029,
+    DAWN_TEXTURE_FORMAT_BC2_RGBA_UNORM_SRGB = 0x0000002A,
+    DAWN_TEXTURE_FORMAT_BC3_RGBA_UNORM = 0x0000002B,
+    DAWN_TEXTURE_FORMAT_BC3_RGBA_UNORM_SRGB = 0x0000002C,
+    DAWN_TEXTURE_FORMAT_BC4_R_UNORM = 0x0000002D,
+    DAWN_TEXTURE_FORMAT_BC4_R_SNORM = 0x0000002E,
+    DAWN_TEXTURE_FORMAT_BC5_RG_UNORM = 0x0000002F,
+    DAWN_TEXTURE_FORMAT_BC5_RG_SNORM = 0x00000030,
+    DAWN_TEXTURE_FORMAT_BC6H_RGB_UFLOAT = 0x00000031,
+    DAWN_TEXTURE_FORMAT_BC6H_RGB_SFLOAT = 0x00000032,
+    DAWN_TEXTURE_FORMAT_BC7_RGBA_UNORM = 0x00000033,
+    DAWN_TEXTURE_FORMAT_BC7_RGBA_UNORM_SRGB = 0x00000034,
     DAWN_TEXTURE_FORMAT_FORCE32 = 0x7FFFFFFF
 } DawnTextureFormat;
 
 typedef enum {
-    DAWN_TEXTURE_VIEW_DIMENSION_1D = 0x00000000,
-    DAWN_TEXTURE_VIEW_DIMENSION_2D = 0x00000001,
-    DAWN_TEXTURE_VIEW_DIMENSION_2D_ARRAY = 0x00000002,
-    DAWN_TEXTURE_VIEW_DIMENSION_CUBE = 0x00000003,
-    DAWN_TEXTURE_VIEW_DIMENSION_CUBE_ARRAY = 0x00000004,
-    DAWN_TEXTURE_VIEW_DIMENSION_3D = 0x00000005,
-    DAWN_TEXTURE_VIEW_DIMENSION_NONE = 0xFFFFFFFF,
+    DAWN_TEXTURE_VIEW_DIMENSION_UNDEFINED = 0x00000000,
+    DAWN_TEXTURE_VIEW_DIMENSION_1D = 0x00000001,
+    DAWN_TEXTURE_VIEW_DIMENSION_2D = 0x00000002,
+    DAWN_TEXTURE_VIEW_DIMENSION_2D_ARRAY = 0x00000003,
+    DAWN_TEXTURE_VIEW_DIMENSION_CUBE = 0x00000004,
+    DAWN_TEXTURE_VIEW_DIMENSION_CUBE_ARRAY = 0x00000005,
+    DAWN_TEXTURE_VIEW_DIMENSION_3D = 0x00000006,
     DAWN_TEXTURE_VIEW_DIMENSION_FORCE32 = 0x7FFFFFFF
 } DawnTextureViewDimension;
 
@@ -376,6 +376,7 @@ typedef struct DawnBindGroupLayoutBinding {
     DawnBindingType type;
     bool dynamic;
     bool multisampled;
+    DawnTextureViewDimension textureDimension;
     DawnTextureComponentType textureComponentType;
 } DawnBindGroupLayoutBinding;
 
@@ -523,6 +524,7 @@ typedef struct DawnTextureViewDescriptor {
     uint32_t mipLevelCount;
     uint32_t baseArrayLayer;
     uint32_t arrayLayerCount;
+    DawnTextureAspect aspect;
 } DawnTextureViewDescriptor;
 
 typedef struct DawnVertexAttributeDescriptor {
@@ -555,7 +557,7 @@ typedef struct DawnColorStateDescriptor {
 typedef struct DawnComputePipelineDescriptor {
     const void* nextInChain;
     DawnPipelineLayout layout;
-    DawnPipelineStageDescriptor const * computeStage;
+    DawnPipelineStageDescriptor computeStage;
 } DawnComputePipelineDescriptor;
 
 typedef struct DawnDepthStencilStateDescriptor {
@@ -619,7 +621,7 @@ typedef struct DawnVertexInputDescriptor {
 typedef struct DawnRenderPipelineDescriptor {
     const void* nextInChain;
     DawnPipelineLayout layout;
-    DawnPipelineStageDescriptor const * vertexStage;
+    DawnPipelineStageDescriptor vertexStage;
     DawnPipelineStageDescriptor const * fragmentStage;
     DawnVertexInputDescriptor const * vertexInput;
     DawnPrimitiveTopology primitiveTopology;
@@ -681,6 +683,9 @@ typedef void (*DawnProcCommandEncoderCopyBufferToBuffer)(DawnCommandEncoder comm
 typedef void (*DawnProcCommandEncoderCopyBufferToTexture)(DawnCommandEncoder commandEncoder, DawnBufferCopyView const * source, DawnTextureCopyView const * destination, DawnExtent3D const * copySize);
 typedef void (*DawnProcCommandEncoderCopyTextureToBuffer)(DawnCommandEncoder commandEncoder, DawnTextureCopyView const * source, DawnBufferCopyView const * destination, DawnExtent3D const * copySize);
 typedef void (*DawnProcCommandEncoderCopyTextureToTexture)(DawnCommandEncoder commandEncoder, DawnTextureCopyView const * source, DawnTextureCopyView const * destination, DawnExtent3D const * copySize);
+typedef void (*DawnProcCommandEncoderInsertDebugMarker)(DawnCommandEncoder commandEncoder, char const * groupLabel);
+typedef void (*DawnProcCommandEncoderPopDebugGroup)(DawnCommandEncoder commandEncoder);
+typedef void (*DawnProcCommandEncoderPushDebugGroup)(DawnCommandEncoder commandEncoder, char const * groupLabel);
 typedef void (*DawnProcCommandEncoderReference)(DawnCommandEncoder commandEncoder);
 typedef void (*DawnProcCommandEncoderRelease)(DawnCommandEncoder commandEncoder);
 
@@ -836,6 +841,9 @@ struct DawnProcTable_s {
     DawnProcCommandEncoderCopyBufferToTexture commandEncoderCopyBufferToTexture;
     DawnProcCommandEncoderCopyTextureToBuffer commandEncoderCopyTextureToBuffer;
     DawnProcCommandEncoderCopyTextureToTexture commandEncoderCopyTextureToTexture;
+    DawnProcCommandEncoderInsertDebugMarker commandEncoderInsertDebugMarker;
+    DawnProcCommandEncoderPopDebugGroup commandEncoderPopDebugGroup;
+    DawnProcCommandEncoderPushDebugGroup commandEncoderPushDebugGroup;
     DawnProcCommandEncoderReference commandEncoderReference;
     DawnProcCommandEncoderRelease commandEncoderRelease;
 
@@ -987,6 +995,9 @@ DAWN_EXPORT void dawnCommandEncoderCopyBufferToBuffer(DawnCommandEncoder command
 DAWN_EXPORT void dawnCommandEncoderCopyBufferToTexture(DawnCommandEncoder commandEncoder, DawnBufferCopyView const * source, DawnTextureCopyView const * destination, DawnExtent3D const * copySize);
 DAWN_EXPORT void dawnCommandEncoderCopyTextureToBuffer(DawnCommandEncoder commandEncoder, DawnTextureCopyView const * source, DawnBufferCopyView const * destination, DawnExtent3D const * copySize);
 DAWN_EXPORT void dawnCommandEncoderCopyTextureToTexture(DawnCommandEncoder commandEncoder, DawnTextureCopyView const * source, DawnTextureCopyView const * destination, DawnExtent3D const * copySize);
+DAWN_EXPORT void dawnCommandEncoderInsertDebugMarker(DawnCommandEncoder commandEncoder, char const * groupLabel);
+DAWN_EXPORT void dawnCommandEncoderPopDebugGroup(DawnCommandEncoder commandEncoder);
+DAWN_EXPORT void dawnCommandEncoderPushDebugGroup(DawnCommandEncoder commandEncoder, char const * groupLabel);
 DAWN_EXPORT void dawnCommandEncoderReference(DawnCommandEncoder commandEncoder);
 DAWN_EXPORT void dawnCommandEncoderRelease(DawnCommandEncoder commandEncoder);
 
