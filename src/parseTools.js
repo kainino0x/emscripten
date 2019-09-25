@@ -1654,7 +1654,7 @@ function makeModuleReceiveWithVar(localName, moduleName, defaultValue, noAssert)
   return ret;
 }
 
-function makeU64ToNumber(highName, lowName) {
+function makeU64ToNumber(lowName, highName) {
   var ret = '('
   if (ASSERTIONS) {
     ret += 'assert(' + highName + ' < 0x200000), ';

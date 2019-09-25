@@ -2593,9 +2593,10 @@ var LibraryJSEvents = {
   emscripten_webgpu_get_device: 'emscripten_webgpu_do_get_device',
   emscripten_webgpu_do_get_device__deps: ['$WebGPU'],
   emscripten_webgpu_do_get_device: function() {
-    assert(Module['preinitializedWebGPUDevice']);
     // TODO(kainino0x): make it possible to actually create devices
-    return WebGPU.mgrDevice().create(Module['preinitializedWebGPUDevice']);
+    assert(Module['preinitializedWebGPUDevice']);
+    WebGPU.initManagers();
+    return WebGPU.mgrDevice.create(Module['preinitializedWebGPUDevice']);
   },
 #endif
 
