@@ -26,7 +26,7 @@
       return s;
     },
 
-    makeGetBool: function(ptr, pos) { return makeGetValue(ptr, pos, 'i32') !== 0; },
+    makeGetBool: function(ptr, pos) { return '(' + makeGetValue(ptr, pos, 'i32') + ' !== 0)'; },
     makeGetU32: function(ptr, pos) { return makeGetValue(ptr, pos, 'i32', false, true); },
     makeGetU64: function(ptr, pos) { return makeGetValue(ptr, pos, 'i64', false, true); },
 
@@ -443,8 +443,7 @@ var LibraryWebGPU = {
         {{{ makeGetValue('descriptor', C_STRUCTS.DawnRenderPipelineDescriptor.vertexInput, '*') }}}),
       sampleCount: {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnRenderPipelineDescriptor.sampleCount) }}},
       sampleMask: {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnRenderPipelineDescriptor.sampleMask) }}},
-      // TODO(kainino0x): Turn this on when it doesn't throw an error in Chrome.
-      //alphaToCoverageEnabled: {{{ gpu.makeGetBool('descriptor', C_STRUCTS.DawnRenderPipelineDescriptor.alphaToCoverageEnabled) }}},
+      alphaToCoverageEnabled: {{{ gpu.makeGetBool('descriptor', C_STRUCTS.DawnRenderPipelineDescriptor.alphaToCoverageEnabled) }}},
     };
 
     var device = WebGPU.mgrDevice.get(deviceId);
@@ -470,8 +469,9 @@ var LibraryWebGPU = {
       var type;
       if (ev.error instanceof GPUValidationError) type = Validation;
       else if (ev.error instanceof GPUOutOfMemoryError) type = OutOfMemory;
-      var message = 0; // TODO: copy ev.error.message into memory, pass it, then free it
-      dynCall('viii', callback, [type, message, userdata]);
+      var messagePtr = allocateUTF8(ev.error.message);
+      dynCall('viii', callback, [type, messagePtr, userdata]);
+      _free(messagePtr);
     };
   },
 
