@@ -49,6 +49,8 @@
 var LibraryWebGPU = {
   $WebGPU: {
     initManagers: function() {
+      if (this.mgrDevice) return;
+
       function makeManager() {
         return {
           objects: [undefined],

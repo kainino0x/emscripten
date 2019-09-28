@@ -2598,6 +2598,16 @@ var LibraryJSEvents = {
     WebGPU.initManagers();
     return WebGPU.mgrDevice.create(Module['preinitializedWebGPUDevice']);
   },
+
+  emscripten_webgpu_get_current_texture__sig: 'i',
+  emscripten_webgpu_get_current_texture: 'emscripten_webgpu_do_get_current_texture',
+  emscripten_webgpu_do_get_current_texture__deps: ['$WebGPU'],
+  emscripten_webgpu_do_get_current_texture: function() {
+    var swapchain = Module['preinitializedWebGPUSwapChain'];
+    assert(swapchain);
+    WebGPU.initManagers();
+    return WebGPU.mgrTexture.create(swapchain.getCurrentTexture());
+  },
 #endif
 
 #if USE_PTHREADS
