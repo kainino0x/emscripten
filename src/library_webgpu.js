@@ -26,6 +26,7 @@
       return s;
     },
 
+    // TODO is getbool correct? It might not be if bools are packed as 8 bits
     makeGetBool: function(ptr, pos) { return '(' + makeGetValue(ptr, pos, 'i32') + ' !== 0)'; },
     makeGetU32: function(ptr, pos) { return makeGetValue(ptr, pos, 'i32', false, true); },
     makeGetU64: function(ptr, pos) { return makeGetValue(ptr, pos, 'i64', false, true); },
@@ -87,12 +88,15 @@ var LibraryWebGPU = {
       {{{ gpu.makeInitManager('CommandEncoder') }}}
       {{{ gpu.makeInitManager('RenderPassEncoder') }}}
 
+      {{{ gpu.makeInitManager('BindGroup') }}}
       {{{ gpu.makeInitManager('Buffer') }}}
+      {{{ gpu.makeInitManager('Sampler') }}}
       {{{ gpu.makeInitManager('Texture') }}}
       {{{ gpu.makeInitManager('TextureView') }}}
 
-      {{{ gpu.makeInitManager('RenderPipeline') }}}
+      {{{ gpu.makeInitManager('BindGroupLayout') }}}
       {{{ gpu.makeInitManager('PipelineLayout') }}}
+      {{{ gpu.makeInitManager('RenderPipeline') }}}
       {{{ gpu.makeInitManager('ShaderModule') }}}
     },
 
@@ -198,12 +202,15 @@ var LibraryWebGPU = {
   {{{ gpu.makeReferenceRelease('CommandEncoder') }}}
   {{{ gpu.makeReferenceRelease('RenderPassEncoder') }}}
 
+  {{{ gpu.makeReferenceRelease('BindGroup') }}}
   {{{ gpu.makeReferenceRelease('Buffer') }}}
+  {{{ gpu.makeReferenceRelease('Sampler') }}}
   {{{ gpu.makeReferenceRelease('Texture') }}}
   {{{ gpu.makeReferenceRelease('TextureView') }}}
 
-  {{{ gpu.makeReferenceRelease('RenderPipeline') }}}
+  {{{ gpu.makeReferenceRelease('BindGroupLayout') }}}
   {{{ gpu.makeReferenceRelease('PipelineLayout') }}}
+  {{{ gpu.makeReferenceRelease('RenderPipeline') }}}
   {{{ gpu.makeReferenceRelease('ShaderModule') }}}
 
   // *Destroy
@@ -257,6 +264,145 @@ var LibraryWebGPU = {
 
     var device = WebGPU.mgrDevice.get(deviceId);
     return WebGPU.mgrTexture.create(device.createTexture(desc));
+  },
+
+  dawnDeviceCreateSampler: function(deviceId, descriptor) {
+    {{{ gpu.makeCheckDescriptor('descriptor') }}}
+
+    var desc = {
+      addressModeU: WebGPU.AddressMode[
+          {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnSamplerDescriptor.addressModeU) }}}],
+      addressModeV: WebGPU.AddressMode[
+          {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnSamplerDescriptor.addressModeV) }}}],
+      addressModeW: WebGPU.AddressMode[
+          {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnSamplerDescriptor.addressModeW) }}}],
+      magFilter: WebGPU.FilterMode[
+          {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnSamplerDescriptor.magFilter) }}}],
+      minFilter: WebGPU.FilterMode[
+          {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnSamplerDescriptor.minFilter) }}}],
+      mipmapFilter: WebGPU.FilterMode[
+          {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnSamplerDescriptor.mipmapFilter) }}}],
+      lodMinClamp: {{{ makeGetValue('descriptor', C_STRUCTS.DawnSamplerDescriptor.lodMinClamp, 'float') }}},
+      lodMaxClamp: {{{ makeGetValue('descriptor', C_STRUCTS.DawnSamplerDescriptor.lodMaxClamp, 'float') }}},
+      compare: WebGPU.CompareFunction[
+          {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnSamplerDescriptor.compare) }}}],
+    };
+
+    var device = WebGPU.mgrDevice.get(deviceId);
+    return WebGPU.mgrSampler.create(device.createSampler(desc));
+  },
+
+  dawnDeviceCreateBindGroupLayout: function(deviceId, descriptor) {
+    {{{ gpu.makeCheckDescriptor('descriptor') }}}
+
+    function makeBinding(bindingPtr) {
+      {{{ gpu.makeCheckDescriptor('bindingPtr') }}}
+
+      return {
+        binding:
+          {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.binding) }}},
+        visibility:
+          {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.visibility) }}},
+        type: WebGPU.BindingType[
+          {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.type) }}}],
+        textureDimension: WebGPU.TextureDimension[
+          {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.textureDimension) }}}],
+        textureComponentType: WebGPU.TextureComponentType[
+          {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.textureComponentType) }}}],
+        multisampled:
+          {{{ gpu.makeGetBool('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.multisampled) }}},
+        // TODO this changed in upstream Dawn
+        hasDynamicOffset:
+          {{{ gpu.makeGetBool('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.dynamic) }}},
+      };
+    }
+
+    function makeBindings(count, bindingsPtrs) {
+      var bindings = [];
+      for (var i = 0; i < count; ++i) {
+        bindings.push(makeBinding(bindingsPtrs +
+            {{{C_STRUCTS.DawnBindGroupLayoutBinding.__size__}}} * i));
+      }
+      return bindings;
+    }
+
+    var desc = {
+      bindings: makeBindings(
+        {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnBindGroupLayoutDescriptor.bindingCount) }}},
+        {{{ makeGetValue('descriptor', C_STRUCTS.DawnBindGroupLayoutDescriptor.bindings, '*') }}},
+      ),
+    };
+
+    var device = WebGPU.mgrDevice.get(deviceId);
+    return WebGPU.mgrBindGroupLayout.create(device.createBindGroupLayout(desc));
+  },
+
+  dawnDeviceCreateBindGroup: function(deviceId, descriptor) {
+    {{{ gpu.makeCheckDescriptor('descriptor') }}}
+
+    function makeBinding(bindingPtr) {
+      {{{ gpu.makeCheckDescriptor('bindingPtr') }}}
+
+      var bufferId = {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupBinding.buffer) }}};
+      var samplerId = {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupBinding.sampler) }}};
+      var textureViewId = {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupBinding.textureView) }}};
+#if ASSERTIONS
+      assert((buffferId != 0) + (samplerId != 0) + (textureViewId != 0) == 1);
+#endif
+
+      var binding = {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.binding) }}};
+
+      if (bufferId != 0) {
+        var size = undefined;
+
+        // Handle WGPU_WHOLE_SIZE.
+        var sizePart1 = {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupBinding.size) }}};
+        var sizePart2 = {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupBinding.size + 4) }}};
+        if (sizePart1 != 0xFFFFFFFF || sizePart2 != 0xFFFFFFFF) {
+          size = {{{ gpu.makeGetU64('bindingPtr', C_STRUCTS.DawnBindGroupBinding.size) }}};
+        }
+
+        return {
+          binding,
+          resource: {
+            buffer: WebGPU.mgrBuffer.get(bufferId),
+            offset: {{{ gpu.makeGetU64('bindingPtr', C_STRUCTS.DawnBindGroupBinding.offset) }}},
+            size,
+          },
+        };
+      } else if (samplerId != 0) {
+        return {
+          binding,
+          resource: WebGPU.mgrSampler.get(sampledId),
+        };
+      } else {
+        return {
+          binding,
+          resource: WebGPU.mgrTextureView.get(textureViewId),
+        };
+      }
+    }
+
+    function makeBindings(count, bindingsPtrs) {
+      var bindings = [];
+      for (var i = 0; i < count; ++i) {
+        bindings.push(makeBinding(bindingsPtrs +
+            {{{C_STRUCTS.DawnBindGroupBinding.__size__}}} * i));
+      }
+      return bindings;
+    }
+
+    var desc = {
+      layout: WebGPU.mgrPipelineLayout.get(
+        {{{ makeGetValue('descriptor', C_STRUCTS.DawnBindGroupDescriptor.layout, '*') }}}),
+      bindings: makeBindings(
+        {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnBindGroupDescriptor.bindingCount) }}},
+        {{{ makeGetValue('descriptor', C_STRUCTS.DawnBindGroupDescriptor.bindings, '*') }}},
+      ),
+    };
+
+    var device = WebGPU.mgrDevice.get(deviceId);
+    return WebGPU.mgrBindGroup.create(device.createBindGroup(desc));
   },
 
   dawnDeviceCreatePipelineLayout: function(deviceId, descriptor) {
@@ -324,13 +470,12 @@ var LibraryWebGPU = {
       };
     }
 
-    function makeColorStates(count, csPtrs) {
+    function makeColorStates(count, csPtr) {
       if (count === 0) return undefined;
 
       var states = [];
       for (var i = 0; i < count; ++i) {
-        states.push(makeColorState(
-          {{{ makeGetValue('csPtrs', 'i * 4', '*') }}}));
+        states.push(makeColorState(csPtr + {{{C_STRUCTS.DawnColorStateDescriptor.__size__}}} * i));
       }
       return states;
     }
@@ -511,11 +656,10 @@ var LibraryWebGPU = {
       };
     }
 
-    function makeColorAttachments(count, caPtrs) {
+    function makeColorAttachments(count, caPtr) {
       var attachments = [];
       for (var i = 0; i < count; ++i) {
-        attachments.push(makeColorAttachment(
-          {{{ makeGetValue('caPtrs', 'i * 4', '*') }}}));
+        attachments.push(makeColorAttachment(caPtr + {{{C_STRUCTS.DawnRenderPassColorAttachmentDescriptor.__size__}}} * i));
       }
       return attachments;
     }
@@ -659,14 +803,56 @@ var LibraryWebGPU = {
 
   // dawnRenderPass
 
+  dawnRenderPassEncoderSetBindGroup: function(passId, groupIndex, groupId, dynamicOffsetCount, dynamicOffsetsPtr) {
+    var pass = WebGPU.mgrRenderPassEncoder.get(passId);
+    var group = WebGPU.mgrBindGroup.get(groupId);
+    if (dynamicOffsetCount == 0) {
+      pass.setBindGroup(groupIndex, group);
+    } else {
+      var offsets = [];
+      for (var i = 0; i < dynamicOffsetCount; i++, dynamicOffsetsPtr += 8) {
+        offsets.push({{{ gpu.makeGetU64('dynamicOffsetsPtr', 0) }}});
+      }
+      pass.setBindGroup(groupIndex, group, offsets);
+    }
+  },
+  dawnRenderPassEncoderSetIndexBufer: function(passId, bufferId, offset) {
+    var pass = WebGPU.mgrRenderPassEncoder.get(passId);
+    var buffer = WebGPU.mgrBuffer.get(bufferId);
+    pass.setIndexBuffer(buffer, offset);
+  },
   dawnRenderPassEncoderSetPipeline: function(passId, pipelineId) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     var pipeline = WebGPU.mgrRenderPipeline.get(pipelineId);
     pass.setPipeline(pipeline);
   },
+  dawnRenderPassEncoderSetScissorRect: function(passId, x, y, w, h) {
+    var pass = WebGPU.mgrRenderPassEncoder.get(passId);
+    pass.setScissorRect(x, y, w, h);
+  },
+  dawnRenderPassSetVertexBuffers(passId, startSlot, count, buffersPtr, offsetsPtr) {
+    var pass = WebGPU.mgrRenderPassEncoder.get(passId);
+
+#if ASSERTIONS
+    assert(buffersPtr % 4 === 0);
+#endif
+    var buffers = Array.from(HEAP32.subarray(commands >> 2, (commands >> 2) + commandCount),
+      function(id) { return WebGPU.mgrBuffer.get(id); });
+
+    var offsets = [];
+    for (var i = 0; i < count; i++, offsetsPtr += 8) {
+        offsets.push({{{ gpu.makeGetU64('offsetsPtr', 0) }}});
+    }
+
+    pass.setVertexBuffers(startSlot, buffers, offsets);
+  },
   dawnRenderPassEncoderDraw: function(passId, vertexCount, instanceCount, firstVertex, firstInstance) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+  },
+  dawnRenderPassEncoderDrawIndexed: function(passId, indexCount, instanceCount, firstIndex, baseVertex, firstInstance) {
+    var pass = WebGPU.mgrRenderPassEncoder.get(passId);
+    pass.drawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
   },
   dawnRenderPassEncoderEndPass: function(passId) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
