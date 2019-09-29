@@ -1635,7 +1635,7 @@
                 "binding",
                 "visibility",
                 "type",
-                "dynamic",
+                "hasDynamicOffset",
                 "multisampled",
                 "textureDimension",
                 "textureComponentType"
@@ -1664,13 +1664,15 @@
                 "a"
             ],
             "DawnCommandBufferDescriptor": [
-                "nextInChain"
+                "nextInChain",
+                "label"
             ],
             "DawnCommandEncoderDescriptor": [
                 "nextInChain"
             ],
             "DawnComputePassDescriptor": [
-                "nextInChain"
+                "nextInChain",
+                "label"
             ],
             "DawnCreateBufferMappedResult": [
                 "buffer",

@@ -316,9 +316,8 @@ var LibraryWebGPU = {
           {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.textureComponentType) }}}],
         multisampled:
           {{{ gpu.makeGetBool('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.multisampled) }}},
-        // TODO(kainino0x): Update naming once newer Dawn is pulled in.
         hasDynamicOffset:
-          {{{ gpu.makeGetBool('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.dynamic) }}},
+          {{{ gpu.makeGetBool('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.hasDynamicOffset) }}},
       };
     }
 

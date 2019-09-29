@@ -191,6 +191,7 @@ typedef enum {
 
 typedef enum {
     DAWN_STORE_OP_STORE = 0x00000000,
+    DAWN_STORE_OP_CLEAR = 0x00000001,
     DAWN_STORE_OP_FORCE32 = 0x7FFFFFFF
 } DawnStoreOp;
 
@@ -374,7 +375,7 @@ typedef struct DawnBindGroupLayoutBinding {
     uint32_t binding;
     DawnShaderStage visibility;
     DawnBindingType type;
-    bool dynamic;
+    bool hasDynamicOffset;
     bool multisampled;
     DawnTextureViewDimension textureDimension;
     DawnTextureComponentType textureComponentType;
@@ -409,6 +410,7 @@ typedef struct DawnColor {
 
 typedef struct DawnCommandBufferDescriptor {
     const void* nextInChain;
+    char const * label;
 } DawnCommandBufferDescriptor;
 
 typedef struct DawnCommandEncoderDescriptor {
@@ -417,6 +419,7 @@ typedef struct DawnCommandEncoderDescriptor {
 
 typedef struct DawnComputePassDescriptor {
     const void* nextInChain;
+    char const * label;
 } DawnComputePassDescriptor;
 
 typedef struct DawnCreateBufferMappedResult {
@@ -607,7 +610,7 @@ typedef struct DawnVertexBufferDescriptor {
 
 typedef struct DawnRenderPassDescriptor {
     uint32_t colorAttachmentCount;
-    const DawnRenderPassColorAttachmentDescriptor* const * colorAttachments;
+    DawnRenderPassColorAttachmentDescriptor const * colorAttachments;
     DawnRenderPassDepthStencilAttachmentDescriptor const * depthStencilAttachment;
 } DawnRenderPassDescriptor;
 
@@ -629,7 +632,7 @@ typedef struct DawnRenderPipelineDescriptor {
     uint32_t sampleCount;
     DawnDepthStencilStateDescriptor const * depthStencilState;
     uint32_t colorStateCount;
-    const DawnColorStateDescriptor* const * colorStates;
+    DawnColorStateDescriptor const * colorStates;
     uint32_t sampleMask;
     bool alphaToCoverageEnabled;
 } DawnRenderPipelineDescriptor;
