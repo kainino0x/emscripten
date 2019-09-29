@@ -26,7 +26,7 @@
       return s;
     },
 
-    // TODO is getbool correct? It might not be if bools are packed as 8 bits
+    // TODO(kainino0x): makeGetBool is wrong; bools are actually 1 byte.
     makeGetBool: function(ptr, pos) { return '(' + makeGetValue(ptr, pos, 'i32') + ' !== 0)'; },
     makeGetU32: function(ptr, pos) { return makeGetValue(ptr, pos, 'i32', false, true); },
     makeGetU64: function(ptr, pos) { return makeGetValue(ptr, pos, 'i64', false, true); },
@@ -311,7 +311,7 @@ var LibraryWebGPU = {
           {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.textureComponentType) }}}],
         multisampled:
           {{{ gpu.makeGetBool('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.multisampled) }}},
-        // TODO this changed in upstream Dawn
+        // TODO(kainino0x): this has changed in upstream Dawn
         hasDynamicOffset:
           {{{ gpu.makeGetBool('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.dynamic) }}},
       };
@@ -321,7 +321,7 @@ var LibraryWebGPU = {
       var bindings = [];
       for (var i = 0; i < count; ++i) {
         bindings.push(makeBinding(bindingsPtrs +
-            {{{C_STRUCTS.DawnBindGroupLayoutBinding.__size__}}} * i));
+            {{{ C_STRUCTS.DawnBindGroupLayoutBinding.__size__ }}} * i));
       }
       return bindings;
     }
@@ -347,7 +347,7 @@ var LibraryWebGPU = {
       var samplerId = {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupBinding.sampler) }}};
       var textureViewId = {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupBinding.textureView) }}};
 #if ASSERTIONS
-      assert((buffferId != 0) + (samplerId != 0) + (textureViewId != 0) == 1);
+      assert((bufferId != 0) + (samplerId != 0) + (textureViewId != 0) == 1);
 #endif
 
       var binding = {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.binding) }}};
@@ -367,7 +367,7 @@ var LibraryWebGPU = {
           resource: {
             buffer: WebGPU.mgrBuffer.get(bufferId),
             offset: {{{ gpu.makeGetU64('bindingPtr', C_STRUCTS.DawnBindGroupBinding.offset) }}},
-            size,
+            size: size,
           },
         };
       } else if (samplerId != 0) {
@@ -475,7 +475,7 @@ var LibraryWebGPU = {
 
       var states = [];
       for (var i = 0; i < count; ++i) {
-        states.push(makeColorState(csPtr + {{{C_STRUCTS.DawnColorStateDescriptor.__size__}}} * i));
+        states.push(makeColorState(csPtr + {{{ C_STRUCTS.DawnColorStateDescriptor.__size__ }}} * i));
       }
       return states;
     }
@@ -659,7 +659,7 @@ var LibraryWebGPU = {
     function makeColorAttachments(count, caPtr) {
       var attachments = [];
       for (var i = 0; i < count; ++i) {
-        attachments.push(makeColorAttachment(caPtr + {{{C_STRUCTS.DawnRenderPassColorAttachmentDescriptor.__size__}}} * i));
+        attachments.push(makeColorAttachment(caPtr + {{{ C_STRUCTS.DawnRenderPassColorAttachmentDescriptor.__size__ }}} * i));
       }
       return attachments;
     }
