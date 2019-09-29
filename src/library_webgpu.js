@@ -26,8 +26,11 @@
       return s;
     },
 
-    // TODO(kainino0x): makeGetBool is wrong; bools are actually 1 byte.
-    makeGetBool: function(ptr, pos) { return '(' + makeGetValue(ptr, pos, 'i32') + ' !== 0)'; },
+    makeGetBool: function(ptr, pos) {
+      // In an actual build, bool seems to be i8. But on the off-chance it's i32, on little-endian
+      // this will still work as long as the value of 'true' isn't zero in the lowest byte.
+      return '(' + makeGetValue(ptr, pos, 'i8') + ' !== 0)';
+    },
     makeGetU32: function(ptr, pos) { return makeGetValue(ptr, pos, 'i32', false, true); },
     makeGetU64: function(ptr, pos) { return makeGetValue(ptr, pos, 'i64', false, true); },
 
@@ -313,7 +316,7 @@ var LibraryWebGPU = {
           {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.textureComponentType) }}}],
         multisampled:
           {{{ gpu.makeGetBool('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.multisampled) }}},
-        // TODO(kainino0x): this has changed in upstream Dawn
+        // TODO(kainino0x): Update naming once newer Dawn is pulled in.
         hasDynamicOffset:
           {{{ gpu.makeGetBool('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.dynamic) }}},
       };
@@ -541,6 +544,7 @@ var LibraryWebGPU = {
         stride: {{{ gpu.makeGetU64('vbPtr', C_STRUCTS.DawnVertexBufferDescriptor.stride) }}},
         stepMode: WebGPU.InputStepMode[
           {{{ gpu.makeGetU32('vbPtr', C_STRUCTS.DawnVertexBufferDescriptor.stepMode) }}}],
+        // TODO(kainino0x): Update naming once Dawn matches WebGPU.
         attributeSet: makeVertexAttributes(
           {{{ gpu.makeGetU32('vbPtr', C_STRUCTS.DawnVertexBufferDescriptor.attributeCount) }}},
           {{{ makeGetValue('vbPtr', C_STRUCTS.DawnVertexBufferDescriptor.attributes, '*') }}}),
