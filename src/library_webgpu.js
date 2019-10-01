@@ -32,7 +32,11 @@
       return '(' + makeGetValue(ptr, pos, 'i8') + ' !== 0)';
     },
     makeGetU32: function(ptr, pos) { return makeGetValue(ptr, pos, 'i32', false, true); },
-    makeGetU64: function(ptr, pos) { return makeGetValue(ptr, pos, 'i64', false, true); },
+    makeGetU64: function(ptr, pos) {
+      var l = makeGetValue(ptr, pos, 'i32', false, true);
+      var h = makeGetValue('(' + ptr + ' + 4)', pos, 'i32', false, true)
+      return h + ' * 0x100000000 + ' + l
+    },
 
     makeCheck: function(str) {
       if (!ASSERTIONS) return '';
@@ -178,18 +182,18 @@ var LibraryWebGPU = {
     TextureComponentType: [ 'float', 'sint', 'uint' ],
     TextureDimension: [ '1d', '2d', '3d' ],
     TextureFormat: [
-      'undefined', 'r8unorm', 'r8snorm', 'r8uint', 'r8sint', 'r16uint', 'r16sint',
+      undefined, 'r8unorm', 'r8snorm', 'r8uint', 'r8sint', 'r16uint', 'r16sint',
       'r16float', 'rg8unorm', 'rg8snorm', 'rg8uint', 'rg8sint', 'r32float', 'r32uint',
       'r32sint', 'rg16uint', 'rg16sint', 'rg16float', 'rgba8unorm', 'rgba8unorm-srgb',
       'rgba8snorm', 'rgba8uint', 'rgba8sint', 'bgra8unorm', 'bgra8unorm-srgb',
       'rgb10a2unorm', 'rg11b10float', 'rg32float', 'rg32uint', 'rg32sint', 'rgba16uint',
       'rgba16sint', 'rgba16float', 'rgba32float', 'rgba32uint', 'rgba32sint',
-      'depth32float', 'depth24plus', 'depth24plusstencil8', 'bc1rgbaunorm',
+      'depth32float', 'depth24plus', 'depth24plus-stencil8', 'bc1rgbaunorm',
       'bc1rgbaunorm-srgb', 'bc2rgbaunorm', 'bc2rgbaunorm-srgb', 'bc3rgbaunorm',
       'bc3rgbaunorm-srgb', 'bc4runorm', 'bc4rsnorm', 'bc5rgunorm', 'bc5rgsnorm',
       'bc6hrgbufloat', 'bc6hrgbsfloat', 'bc7rgbaunorm', 'bc7rgbaunorm-srgb',
     ],
-    TextureViewDimension: [ 'undefined', '1d', '2d', '2darray', 'cube', 'cube-array', '3d' ],
+    TextureViewDimension: [ undefined, '1d', '2d', '2darray', 'cube', 'cube-array', '3d' ],
     VertexFormat: [
       'uchar2', 'uchar4', 'char2', 'char4', 'uchar2norm', 'uchar4norm', 'char2norm',
       'char4norm', 'ushort2', 'ushort4', 'short2', 'short4', 'ushort2norm', 'ushort4norm',
@@ -301,7 +305,7 @@ var LibraryWebGPU = {
     {{{ gpu.makeCheckDescriptor('descriptor') }}}
 
     function makeBinding(bindingPtr) {
-      {{{ gpu.makeCheckDescriptor('bindingPtr') }}}
+      {{{ gpu.makeCheck('bindingPtr !== 0') }}}
 
       return {
         binding:
@@ -310,7 +314,7 @@ var LibraryWebGPU = {
           {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.visibility) }}},
         type: WebGPU.BindingType[
           {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.type) }}}],
-        textureDimension: WebGPU.TextureDimension[
+        textureDimension: WebGPU.TextureViewDimension[
           {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.textureDimension) }}}],
         textureComponentType: WebGPU.TextureComponentType[
           {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupLayoutBinding.textureComponentType) }}}],
@@ -345,7 +349,7 @@ var LibraryWebGPU = {
     {{{ gpu.makeCheckDescriptor('descriptor') }}}
 
     function makeBinding(bindingPtr) {
-      {{{ gpu.makeCheckDescriptor('bindingPtr') }}}
+      {{{ gpu.makeCheck('bindingPtr !== 0') }}}
 
       var bufferId = {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupBinding.buffer) }}};
       var samplerId = {{{ gpu.makeGetU32('bindingPtr', C_STRUCTS.DawnBindGroupBinding.sampler) }}};
@@ -377,7 +381,7 @@ var LibraryWebGPU = {
       } else if (samplerId != 0) {
         return {
           binding,
-          resource: WebGPU.mgrSampler.get(sampledId),
+          resource: WebGPU.mgrSampler.get(samplerId),
         };
       } else {
         return {
@@ -397,7 +401,7 @@ var LibraryWebGPU = {
     }
 
     var desc = {
-      layout: WebGPU.mgrPipelineLayout.get(
+      layout: WebGPU.mgrBindGroupLayout.get(
         {{{ makeGetValue('descriptor', C_STRUCTS.DawnBindGroupDescriptor.layout, '*') }}}),
       bindings: makeBindings(
         {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnBindGroupDescriptor.bindingCount) }}},
@@ -416,7 +420,7 @@ var LibraryWebGPU = {
     var bgls = [];
     for (var i = 0; i < bglCount; ++i) {
       bgls.push(WebGPU.mgrBindGroupLayout.get(
-        {{{ makeGetValue('bindGroupLayoutPtr', '4 * i', '*') }}}));
+        {{{ makeGetValue('bglPtr', '4 * i', '*') }}}));
     }
     var desc = { bindGroupLayouts: bgls };
 
@@ -429,9 +433,10 @@ var LibraryWebGPU = {
 
     function makeStage(ptr) {
       if (ptr === 0) return undefined;
+      {{{ gpu.makeCheckDescriptor('ptr') }}}
       return {
         module: WebGPU.mgrShaderModule.get(
-          {{{ gpu.makeGetU32('ptr', C_STRUCTS.DawnPipelineStageDescriptor.module) }}}),
+          {{{ makeGetValue('ptr', C_STRUCTS.DawnPipelineStageDescriptor.module, '*') }}}),
         entryPoint: UTF8ToString(
           {{{ makeGetValue('ptr', C_STRUCTS.DawnPipelineStageDescriptor.entryPoint, '*') }}}),
       };
@@ -527,11 +532,10 @@ var LibraryWebGPU = {
       };
     }
 
-    function makeVertexAttributes(count, vaPtrs) {
+    function makeVertexAttributes(count, vaArrayPtr) {
       var vas = [];
       for (var i = 0; i < count; ++i) {
-        vas.push(makeVertexAttribute(
-          {{{ makeGetValue('vaPtrs', 'i * 4', '*') }}}));
+        vas.push(makeVertexAttribute(vaArrayPtr + i * {{{ C_STRUCTS.DawnVertexAttributeDescriptor.__size__ }}}));
       }
       return vas;
     }
@@ -550,13 +554,12 @@ var LibraryWebGPU = {
       };
     }
 
-    function makeVertexBuffers(count, vbPtrs) {
+    function makeVertexBuffers(count, vbArrayPtr) {
       if (count === 0) return undefined;
 
       var vbs = [];
       for (var i = 0; i < count; ++i) {
-        vbs.push(makeVertexBuffer(
-          {{{ makeGetValue('vbPtrs', 'i * 4', '*') }}}));
+        vbs.push(makeVertexBuffer(vbArrayPtr + i * {{{ C_STRUCTS.DawnVertexBufferDescriptor.__size__ }}}));
       }
       return vbs;
     }
@@ -713,6 +716,13 @@ var LibraryWebGPU = {
       {{{ makeU64ToNumber('size_l', 'size_h') }}});
   },
 
+  dawnCommandEncoderCopyBufferToTexture: function(encoderId, srcPtr, dstPtr, copySizePtr) {
+    var commandEncoder = WebGPU.mgrCommandEncoder.get(encoderId);
+    var copySize = WebGPU.makeExtent3D(copySizePtr);
+    commandEncoder.copyBufferToTexture(
+      WebGPU.makeBufferCopyView(srcPtr), WebGPU.makeTextureCopyView(dstPtr), copySize);
+  },
+
   dawnCommandEncoderCopyTextureToBuffer: function(encoderId, srcPtr, dstPtr, copySizePtr) {
     var commandEncoder = WebGPU.mgrCommandEncoder.get(encoderId);
     var copySize = WebGPU.makeExtent3D(copySizePtr);
@@ -821,7 +831,7 @@ var LibraryWebGPU = {
       pass.setBindGroup(groupIndex, group, offsets);
     }
   },
-  dawnRenderPassEncoderSetIndexBufer: function(passId, bufferId, offset) {
+  dawnRenderPassEncoderSetIndexBuffer: function(passId, bufferId, offset) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     var buffer = WebGPU.mgrBuffer.get(bufferId);
     pass.setIndexBuffer(buffer, offset);
@@ -835,13 +845,13 @@ var LibraryWebGPU = {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass.setScissorRect(x, y, w, h);
   },
-  dawnRenderPassSetVertexBuffers(passId, startSlot, count, buffersPtr, offsetsPtr) {
+  dawnRenderPassEncoderSetVertexBuffers: function(passId, startSlot, count, buffersPtr, offsetsPtr) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
 
 #if ASSERTIONS
     assert(buffersPtr % 4 === 0);
 #endif
-    var buffers = Array.from(HEAP32.subarray(commands >> 2, (commands >> 2) + commandCount),
+    var buffers = Array.from(HEAP32.subarray(buffersPtr >> 2, (buffersPtr >> 2) + count),
       function(id) { return WebGPU.mgrBuffer.get(id); });
 
     var offsets = [];
