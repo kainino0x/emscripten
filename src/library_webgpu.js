@@ -70,13 +70,14 @@ var LibraryWebGPU = {
           },
           get: function(id) {
             if (id === 0) return undefined;
-            {{{ gpu.makeCheckDefined('this.objects[id]') }}}
-            return this.objects[id].object;
+            var o = this.objects[id];
+            {{{ gpu.makeCheckDefined('o') }}}
+            return o.object;
           },
           reference: function(id) {
             var o = this.objects[id];
             {{{ gpu.makeCheckDefined('o') }}}
-            this.objects[id].refcount++;
+            o.refcount++;
           },
           release: function(id) {
             var o = this.objects[id];
@@ -681,12 +682,12 @@ var LibraryWebGPU = {
           {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.depthLoadOp) }}}],
         depthStoreOp: WebGPU.StoreOp[
           {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.depthStoreOp) }}}],
-        clearDepth: {{{ makeGetValue('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.clearDepth, 'float') }}},
+        depthLoadValue: {{{ makeGetValue('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.clearDepth, 'float') }}},
         stencilLoadOp: WebGPU.LoadOp[
           {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.stencilLoadOp) }}}],
         stencilStoreOp: WebGPU.StoreOp[
           {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.stencilStoreOp) }}}],
-        clearStencil: {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.clearStencil) }}},
+        stencilLoadValue: {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.clearStencil) }}},
       };
     }
 
@@ -702,8 +703,10 @@ var LibraryWebGPU = {
       };
     }
 
+    var desc = makeRenderPassDescriptor(descriptor);
+
     var commandEncoder = WebGPU.mgrCommandEncoder.get(encoderId);
-    return WebGPU.mgrRenderPassEncoder.create(commandEncoder.beginRenderPass(makeRenderPassDescriptor(descriptor)));
+    return WebGPU.mgrRenderPassEncoder.create(commandEncoder.beginRenderPass(desc));
   },
 
   dawnCommandEncoderCopyBufferToBuffer: function(encoderId, srcId, srcOffset_l, srcOffset_h, dstId, dstOffset_l, dstOffset_h, size_l, size_h) {
