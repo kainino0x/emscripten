@@ -5,17 +5,18 @@
 
 var LibraryPThread = {
   $PThread__postset: 'if (!ENVIRONMENT_IS_PTHREAD) PThread.initMainThreadBlock();',
-  $PThread__deps: ['$PROCINFO', '_register_pthread_ptr', 'emscripten_main_thread_process_queued_calls', '$ERRNO_CODES'],
+  $PThread__deps: ['$PROCINFO', '_register_pthread_ptr', 'emscripten_main_thread_process_queued_calls', '$ERRNO_CODES', 'emscripten_futex_wake'],
   $PThread: {
     MAIN_THREAD_ID: 1, // A special constant that identifies the main JS thread ID.
     mainThreadInfo: {
       schedPolicy: 0/*SCHED_OTHER*/,
       schedPrio: 0
     },
-    // Since creating a new Web Worker is so heavy (it must reload the whole compiled script page!), maintain a pool of such
-    // workers that have already parsed and loaded the scripts.
-    unusedWorkerPool: [],
-    // The currently executing pthreads.
+    // Contains all Workers that are idle/unused and not currently hosting an executing pthread.
+    // Unused Workers can either be pooled up before page startup, but also when a pthread quits, its hosting
+    // Worker is not terminated, but is returned to this pool as an optimization so that starting the next thread is faster.
+    unusedWorkers: [],
+    // Contains all Workers that are currently hosting an active pthread.
     runningWorkers: [],
     // Points to a pthread_t structure in the Emscripten main heap, allocated on demand if/when first needed.
     // mainThreadBlock: undefined,
@@ -54,8 +55,6 @@ var LibraryPThread = {
     },
     // Maps pthread_t to pthread info objects
     pthreads: {},
-    pthreadIdCounter: 2, // 0: invalid thread, 1: main JS UI thread, 2+: IDs for pthreads
-
     exitHandlers: null, // An array of C functions to run when this thread exits.
 
 #if PTHREADS_PROFILING
@@ -189,20 +188,24 @@ var LibraryPThread = {
         }
       }
       PThread.pthreads = {};
-      for (var t in PThread.unusedWorkerPool) {
-        var pthread = PThread.unusedWorkerPool[t];
-        if (pthread) {
-          PThread.freeThreadData(pthread);
-          if (pthread.worker) pthread.worker.terminate();
-        }
+
+      for (var i = 0; i < PThread.unusedWorkers.length; ++i) {
+        var worker = PThread.unusedWorkers[i];
+#if ASSERTIONS
+        assert(!worker.pthread); // This Worker should not be hosting a pthread at this time.
+#endif
+        worker.terminate();
       }
-      PThread.unusedWorkerPool = [];
-      for (var t in PThread.runningWorkers) {
-        var pthread = PThread.runningWorkers[t];
-        if (pthread) {
-          PThread.freeThreadData(pthread);
-          if (pthread.worker) pthread.worker.terminate();
-        }
+      PThread.unusedWorkers = [];
+
+      for (var i = 0; i < PThread.runningWorkers.length; ++i) {
+        var worker = PThread.runningWorkers[i];
+        var pthread = worker.pthread;
+#if ASSERTIONS
+        assert(pthread); // This Worker should have a pthread it is executing
+#endif
+        PThread.freeThreadData(pthread);
+        worker.terminate();
       }
       PThread.runningWorkers = [];
     },
@@ -222,8 +225,8 @@ var LibraryPThread = {
     returnWorkerToPool: function(worker) {
       delete PThread.pthreads[worker.pthread.thread];
       //Note: worker is intentionally not terminated so the pool can dynamically grow.
-      PThread.unusedWorkerPool.push(worker);
-      PThread.runningWorkers.splice(PThread.runningWorkers.indexOf(worker.pthread), 1); // Not a running Worker anymore
+      PThread.unusedWorkers.push(worker);
+      PThread.runningWorkers.splice(PThread.runningWorkers.indexOf(worker), 1); // Not a running Worker anymore
       PThread.freeThreadData(worker.pthread);
       worker.pthread = undefined; // Detach the worker from the pthread object, and return it to the worker pool as an unused worker.
     },
@@ -313,7 +316,7 @@ var LibraryPThread = {
               }
             } else if (d.cmd === 'exitProcess') {
               // A pthread has requested to exit the whole application process (runtime).
-              Module['noExitRuntime'] = false;
+              noExitRuntime = false;
               try {
                 exit(d.returnCode);
               } catch (e) {
@@ -372,13 +375,13 @@ var LibraryPThread = {
           DYNAMICTOP_PTR: DYNAMICTOP_PTR,
           PthreadWorkerInit: PthreadWorkerInit
         });
-        PThread.unusedWorkerPool.push(worker);
+        PThread.unusedWorkers.push(worker);
       }
     },
 
     getNewWorker: function() {
-      if (PThread.unusedWorkerPool.length == 0) PThread.allocateUnusedWorkers(1);
-      if (PThread.unusedWorkerPool.length > 0) return PThread.unusedWorkerPool.pop();
+      if (PThread.unusedWorkers.length == 0) PThread.allocateUnusedWorkers(1);
+      if (PThread.unusedWorkers.length > 0) return PThread.unusedWorkers.pop();
       else return null;
     },
 
@@ -399,7 +402,7 @@ var LibraryPThread = {
     PThread.freeThreadData(pthread);
     // The worker was completely nuked (not just the pthread execution it was hosting), so remove it from running workers
     // but don't put it back to the pool.
-    PThread.runningWorkers.splice(PThread.runningWorkers.indexOf(pthread.worker.pthread), 1); // Not a running Worker anymore.
+    PThread.runningWorkers.splice(PThread.runningWorkers.indexOf(pthread.worker), 1); // Not a running Worker anymore.
     pthread.worker.pthread = undefined;
   },
 
@@ -724,7 +727,7 @@ var LibraryPThread = {
     if (canceled == 2) throw 'Canceled!';
   },
 
-  {{{ USE_LSAN ? 'emscripten_builtin_' : '' }}}pthread_join__deps: ['_cleanup_thread', '_pthread_testcancel_js', 'emscripten_main_thread_process_queued_calls'],
+  {{{ USE_LSAN ? 'emscripten_builtin_' : '' }}}pthread_join__deps: ['_cleanup_thread', '_pthread_testcancel_js', 'emscripten_main_thread_process_queued_calls', 'emscripten_futex_wait'],
   {{{ USE_LSAN ? 'emscripten_builtin_' : '' }}}pthread_join: function(thread, status) {
     if (!thread) {
       err('pthread_join attempted on a null thread pointer!');
@@ -1094,7 +1097,7 @@ var LibraryPThread = {
 
   __call_main: function(argc, argv) {
     var returnCode = _main(argc, argv);
-    if (!Module['noExitRuntime']) postMessage({ cmd: 'exitProcess', returnCode: returnCode });
+    if (!noExitRuntime) postMessage({ cmd: 'exitProcess', returnCode: returnCode });
     return returnCode;
   },
 

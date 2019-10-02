@@ -52,7 +52,7 @@ if sys.version_info < (2, 7, 12):
 
 
 def exit_with_error(msg, *args):
-  logger.error(msg, *args)
+  logger.error(str(msg), *args)
   sys.exit(1)
 
 
@@ -286,13 +286,11 @@ EM_POPEN_WORKAROUND = None
 SPIDERMONKEY_ENGINE = None
 V8_ENGINE = None
 LLVM_ROOT = None
-COMPILER_ENGINE = None
 LLVM_ADD_VERSION = None
 CLANG_ADD_VERSION = None
 CLOSURE_COMPILER = None
 EMSCRIPTEN_NATIVE_OPTIMIZER = None
 JAVA = None
-JS_ENGINE = None
 JS_ENGINES = []
 COMPILER_OPTS = []
 FROZEN_CACHE = False
@@ -315,12 +313,10 @@ def parse_config_file():
     'EMSCRIPTEN_NATIVE_OPTIMIZER',
     'V8_ENGINE',
     'LLVM_ROOT',
-    'COMPILER_ENGINE',
     'LLVM_ADD_VERSION',
     'CLANG_ADD_VERSION',
     'CLOSURE_COMPILER',
     'JAVA',
-    'JS_ENGINE',
     'JS_ENGINES',
     'COMPILER_OPTS',
     'FROZEN_CACHE',
@@ -360,7 +356,6 @@ parse_config_file()
 SPIDERMONKEY_ENGINE = fix_js_engine(SPIDERMONKEY_ENGINE, listify(SPIDERMONKEY_ENGINE))
 NODE_JS = fix_js_engine(NODE_JS, listify(NODE_JS))
 V8_ENGINE = fix_js_engine(V8_ENGINE, listify(V8_ENGINE))
-COMPILER_ENGINE = listify(COMPILER_ENGINE)
 JS_ENGINES = [listify(engine) for engine in JS_ENGINES]
 
 if EM_POPEN_WORKAROUND is None:
@@ -496,9 +491,11 @@ EMSCRIPTEN_VERSION = get_emscripten_version(path_from_root('emscripten-version.t
 parts = [int(x) for x in EMSCRIPTEN_VERSION.split('.')]
 EMSCRIPTEN_VERSION_MAJOR, EMSCRIPTEN_VERSION_MINOR, EMSCRIPTEN_VERSION_TINY = parts
 # For the Emscripten-specific WASM metadata section, follows semver, changes
-# whenever metadata section changes structure
+# whenever metadata section changes structure.
 # NB: major version 0 implies no compatibility
-(EMSCRIPTEN_METADATA_MAJOR, EMSCRIPTEN_METADATA_MINOR) = (0, 2)
+# NB: when changing the metadata format, we should only append new fields, not
+#     reorder, modify, or remove existing ones.
+(EMSCRIPTEN_METADATA_MAJOR, EMSCRIPTEN_METADATA_MINOR) = (0, 3)
 # For the JS/WASM ABI, specifies the minimum ABI version required of
 # the WASM runtime implementation by the generated WASM binary. It follows
 # semver and changes whenever C types change size/signedness or
@@ -506,8 +503,8 @@ EMSCRIPTEN_VERSION_MAJOR, EMSCRIPTEN_VERSION_MINOR, EMSCRIPTEN_VERSION_TINY = pa
 # implied to be less than (EMSCRIPTEN_ABI_MAJOR + 1, 0). On an ABI
 # change, increment EMSCRIPTEN_ABI_MINOR if EMSCRIPTEN_ABI_MAJOR == 0
 # or the ABI change is backwards compatible, otherwise increment
-# EMSCRIPTEN_ABI_MAJOR and set EMSCRIPTEN_ABI_MINOR = 0
-(EMSCRIPTEN_ABI_MAJOR, EMSCRIPTEN_ABI_MINOR) = (0, 4)
+# EMSCRIPTEN_ABI_MAJOR and set EMSCRIPTEN_ABI_MINOR = 0.
+(EMSCRIPTEN_ABI_MAJOR, EMSCRIPTEN_ABI_MINOR) = (0, 7)
 
 
 def generate_sanity():
@@ -518,8 +515,8 @@ def perform_sanify_checks():
   logger.info('(Emscripten: Running sanity checks)')
 
   with ToolchainProfiler.profile_block('sanity compiler_engine'):
-    if not jsrun.check_engine(COMPILER_ENGINE):
-      exit_with_error('The JavaScript shell used for compiling (%s) does not seem to work, check the paths in %s', COMPILER_ENGINE, EM_CONFIG)
+    if not jsrun.check_engine(NODE_JS):
+      exit_with_error('The configured node executable (%s) does not seem to work, check the paths in %s', NODE_JS, EM_CONFIG)
 
   with ToolchainProfiler.profile_block('sanity LLVM'):
     for cmd in [CLANG, LLVM_AR, LLVM_AS, LLVM_NM]:
@@ -541,11 +538,14 @@ def check_sanity(force=False):
   EM_CONFIG (so, we re-check sanity when the settings are changed).  We also
   re-check sanity and clear the cache when the version changes.
   """
+  if not force and os.environ.get('EMCC_SKIP_SANITY_CHECK') == '1':
+    return
+  # We set EMCC_SKIP_SANITY_CHECK so that any subprocesses that we launch will
+  # not re-run the tests.
+  os.environ['EMCC_SKIP_SANITY_CHECK'] = '1'
   with ToolchainProfiler.profile_block('sanity'):
     check_llvm_version()
     expected = generate_sanity()
-    if os.environ.get('EMCC_SKIP_SANITY_CHECK') == '1':
-      return
     reason = None
     if not CONFIG_FILE:
       return # config stored directly in EM_CONFIG => skip sanity checks
@@ -556,7 +556,7 @@ def check_sanity(force=False):
       sanity_file += '_wasm'
     if os.path.exists(sanity_file):
       sanity_mtime = os.path.getmtime(sanity_file)
-      if sanity_mtime <= settings_mtime:
+      if sanity_mtime < settings_mtime:
         reason = 'settings file has changed'
       else:
         sanity_data = open(sanity_file).read().rstrip()
@@ -885,10 +885,7 @@ apply_configuration()
 
 # EM_CONFIG stuff
 if JS_ENGINES is None:
-  if JS_ENGINE is None:
-    raise 'ERROR: %s does not seem to have JS_ENGINES or JS_ENGINE set up' % EM_CONFIG
-  else:
-    JS_ENGINES = [JS_ENGINE]
+  JS_ENGINES = [NODE_JS]
 
 if CLOSURE_COMPILER is None:
   CLOSURE_COMPILER = path_from_root('third_party', 'closure-compiler', 'compiler.jar')
@@ -963,38 +960,35 @@ def get_llvm_target():
   return LLVM_TARGET
 
 
-# Set the LIBCPP ABI version to at least 2 so that we get nicely aligned string
-# data and other nice fixes.
-COMPILER_OPTS += [# '-fno-threadsafe-statics', # disabled due to issue 1289
-                  '-target', get_llvm_target(),
-                  '-D__EMSCRIPTEN_major__=' + str(EMSCRIPTEN_VERSION_MAJOR),
-                  '-D__EMSCRIPTEN_minor__=' + str(EMSCRIPTEN_VERSION_MINOR),
-                  '-D__EMSCRIPTEN_tiny__=' + str(EMSCRIPTEN_VERSION_TINY),
-                  '-D_LIBCPP_ABI_VERSION=2']
-
-if get_llvm_target() == WASM_TARGET:
-  # wasm target does not automatically define emscripten stuff, so do it here.
-  COMPILER_OPTS += ['-Dunix',
-                    '-D__unix',
-                    '-D__unix__']
-
-# Changes to default clang behavior
-
-# Implicit functions can cause horribly confusing function pointer type errors, see #2175
-# If your codebase really needs them - very unrecommended! - you can disable the error with
-#   -Wno-error=implicit-function-declaration
-# or disable even a warning about it with
-#   -Wno-implicit-function-declaration
-COMPILER_OPTS += ['-Werror=implicit-function-declaration']
-
-
-def emsdk_opts():
+def emsdk_ldflags(user_args):
   if os.environ.get('EMMAKEN_NO_SDK'):
     return []
 
+  library_paths = [
+      path_from_root('system', 'local', 'lib'),
+      path_from_root('system', 'lib'),
+      Cache.dirname
+  ]
+  ldflags = ['-L' + l for l in library_paths]
+
+  if '-nostdlib' in user_args:
+    return ldflags
+
+  # TODO(sbc): Add system libraries here rather than conditionally including
+  # them via .symbols files.
+  libraries = []
+  ldflags += ['-l' + l for l in libraries]
+
+  return ldflags
+
+
+def emsdk_cflags():
   # Disable system C and C++ include directories, and add our own (using
-  # -idirafter so they are last, like system dirs, which allows projects to
+  # -isystem so they are last, like system dirs, which allows projects to
   # override them)
+
+  c_opts = ['-Xclang', '-nostdsysteminc']
+
   c_include_paths = [
     path_from_root('system', 'include', 'compat'),
     path_from_root('system', 'include'),
@@ -1008,8 +1002,6 @@ def emsdk_opts():
     path_from_root('system', 'lib', 'libcxxabi', 'include')
   ]
 
-  c_opts = ['-Xclang', '-nostdsysteminc']
-
   def include_directive(paths):
     result = []
     for path in paths:
@@ -1020,8 +1012,36 @@ def emsdk_opts():
   return c_opts + include_directive(cxx_include_paths) + include_directive(c_include_paths)
 
 
-EMSDK_OPTS = emsdk_opts()
-COMPILER_OPTS += EMSDK_OPTS
+def get_cflags(user_args):
+  # Set the LIBCPP ABI version to at least 2 so that we get nicely aligned string
+  # data and other nice fixes.
+  c_opts = [# '-fno-threadsafe-statics', # disabled due to issue 1289
+            '-target', get_llvm_target(),
+            '-D__EMSCRIPTEN_major__=' + str(EMSCRIPTEN_VERSION_MAJOR),
+            '-D__EMSCRIPTEN_minor__=' + str(EMSCRIPTEN_VERSION_MINOR),
+            '-D__EMSCRIPTEN_tiny__=' + str(EMSCRIPTEN_VERSION_TINY),
+            '-D_LIBCPP_ABI_VERSION=2']
+
+  if get_llvm_target() == WASM_TARGET:
+    # wasm target does not automatically define emscripten stuff, so do it here.
+    c_opts += ['-Dunix',
+               '-D__unix',
+               '-D__unix__']
+
+  # Changes to default clang behavior
+
+  # Implicit functions can cause horribly confusing function pointer type errors, see #2175
+  # If your codebase really needs them - very unrecommended! - you can disable the error with
+  #   -Wno-error=implicit-function-declaration
+  # or disable even a warning about it with
+  #   -Wno-implicit-function-declaration
+  c_opts += ['-Werror=implicit-function-declaration']
+
+  if os.environ.get('EMMAKEN_NO_SDK') or '-nostdinc' in user_args:
+    return c_opts
+
+  return c_opts + emsdk_cflags()
+
 
 # Engine tweaks
 if SPIDERMONKEY_ENGINE:
@@ -1243,9 +1263,6 @@ def verify_settings():
     if Settings.EMTERPRETIFY:
       exit_with_error('emcc: EMTERPRETIFY is not supported by the LLVM wasm backend')
 
-    if not os.path.exists(WASM_LD) or run_process([WASM_LD, '--version'], stdout=PIPE, stderr=PIPE, check=False).returncode != 0:
-      exit_with_error('emcc: WASM_BACKEND selected but could not find lld (wasm-ld): %s', WASM_LD)
-
     if Settings.EMULATED_FUNCTION_POINTERS:
       exit_with_error('emcc: EMULATED_FUNCTION_POINTERS is not meaningful with the wasm backend.')
 
@@ -1337,10 +1354,13 @@ def g_multiprocessing_initializer(*args):
       os.environ[key] = value
 
 
+PRINT_STAGES = int(os.getenv('EMCC_VERBOSE', '0'))
+
+
 def print_compiler_stage(cmd):
   """Emulate the '-v' of clang/gcc by printing the name of the sub-command
   before executing it."""
-  if '-v' in COMPILER_OPTS:
+  if PRINT_STAGES:
     print(' "%s" %s' % (cmd[0], ' '.join(cmd[1:])), file=sys.stderr)
     sys.stderr.flush()
 
@@ -1661,12 +1681,11 @@ class Building(object):
     # On Windows, run the execution through shell to get PATH expansion and
     # executable extension lookup, e.g. 'sdl2-config' will match with
     # 'sdl2-config.bat' in PATH.
-    if EM_BUILD_VERBOSE >= 3:
-      print('make: ' + str(args), file=sys.stderr)
     if EM_BUILD_VERBOSE >= 2:
       stdout = None
     if EM_BUILD_VERBOSE >= 1:
       stderr = None
+    print('make: ' + str(args), file=sys.stderr)
     run_process(args, stdout=stdout, stderr=stderr, env=env, shell=WINDOWS)
 
   @staticmethod
@@ -1776,6 +1795,8 @@ class Building(object):
 
   @staticmethod
   def link_lld(args, target, opts=[], lto_level=0):
+    if not os.path.exists(WASM_LD):
+      exit_with_error('linker binary not found in LLVM directory: %s', WASM_LD)
     # runs lld to link things.
     # lld doesn't currently support --start-group/--end-group since the
     # semantics are more like the windows linker where there is no need for
@@ -1793,10 +1814,15 @@ class Building(object):
         '-o',
         target,
         '--allow-undefined',
-        '--import-memory',
-        '--import-table',
         '--lto-O%d' % lto_level,
     ] + args
+
+    # wasi does not import the memory (but for JS it is efficient to do so,
+    # as it allows us to set up memory, preload files, etc. even before the
+    # wasm module arrives)
+    if not Settings.STANDALONE_WASM:
+      cmd.append('--import-memory')
+      cmd.append('--import-table')
 
     if Settings.USE_PTHREADS:
       cmd.append('--shared-memory')
@@ -1811,10 +1837,6 @@ class Building(object):
     # if Settings.DEBUG_LEVEL < 2 and not Settings.PROFILING_FUNCS:
     #   cmd.append('--strip-debug')
 
-    export_all = False
-    if Settings.MAIN_MODULE == 1 or Settings.EXPORT_ALL:
-      export_all = True
-
     if Settings.RELOCATABLE:
       if Settings.MAIN_MODULE == 2 or Settings.SIDE_MODULE == 2:
         cmd.append('--no-export-dynamic')
@@ -1822,17 +1844,17 @@ class Building(object):
         cmd.append('--no-gc-sections')
         cmd.append('--export-dynamic')
 
-    if export_all:
+    if Settings.LINKABLE:
       cmd.append('--export-all')
-    else:
-      cmd += [
-        '--export',
-        '__wasm_call_ctors',
-        '--export',
-        '__data_end'
-      ]
-      for export in Settings.EXPORTED_FUNCTIONS:
-        cmd += ['--export', export[1:]] # Strip the leading underscore
+
+    cmd += [
+      '--export',
+      '__wasm_call_ctors',
+      '--export',
+      '__data_end'
+    ]
+    for export in Settings.EXPORTED_FUNCTIONS:
+      cmd += ['--export', export[1:]] # Strip the leading underscore
 
     if Settings.RELOCATABLE:
       if Settings.SIDE_MODULE:
@@ -2152,21 +2174,6 @@ class Building(object):
       assert os.path.exists(output_filename), 'emar could not create output file: ' + output_filename
 
   @staticmethod
-  def emscripten(infile, memfile, js_libraries):
-    if path_from_root() not in sys.path:
-      sys.path += [path_from_root()]
-    import emscripten
-    # Run Emscripten
-    outfile = infile + '.o.js'
-    with ToolchainProfiler.profile_block('emscripten.py'):
-      emscripten.run(infile, outfile, memfile, js_libraries)
-
-    # Detect compilation crashes and errors
-    assert os.path.exists(outfile), 'Emscripten failed to generate .js'
-
-    return outfile
-
-  @staticmethod
   def can_inline():
     return Settings.INLINING_LIMIT == 0
 
@@ -2243,7 +2250,10 @@ class Building(object):
   @staticmethod
   def js_optimizer(filename, passes, debug=False, extra_info=None, output_filename=None, just_split=False, just_concat=False, extra_closure_args=[]):
     from . import js_optimizer
-    ret = js_optimizer.run(filename, passes, NODE_JS, debug, extra_info, just_split, just_concat, extra_closure_args)
+    try:
+      ret = js_optimizer.run(filename, passes, NODE_JS, debug, extra_info, just_split, just_concat, extra_closure_args)
+    except subprocess.CalledProcessError as e:
+      exit_with_error("'%s' failed (%d)", ' '.join(e.cmd), e.returncode)
     if output_filename:
       safe_move(ret, output_filename)
       ret = output_filename
@@ -2268,10 +2278,10 @@ class Building(object):
     if not return_output:
       next = original_filename + '.jso.js'
       configuration.get_temp_files().note(next)
-      run_process(cmd, stdout=open(next, 'w'))
+      check_call(cmd, stdout=open(next, 'w'))
       return next
     else:
-      return run_process(cmd, stdout=PIPE).stdout
+      return check_call(cmd, stdout=PIPE).stdout
 
   @staticmethod
   def acorn_optimizer(filename, passes, extra_info=None, return_output=False):
@@ -2439,7 +2449,7 @@ class Building(object):
   # minify the final wasm+JS combination. this is done after all the JS
   # and wasm optimizations; here we do the very final optimizations on them
   @staticmethod
-  def minify_wasm_js(js_file, wasm_file, expensive_optimizations, minify_whitespace, debug_info):
+  def minify_wasm_js(js_file, wasm_file, expensive_optimizations, minify_whitespace, debug_info, emitting_js):
     # start with JSDCE, to clean up obvious JS garbage. When optimizing for size,
     # use AJSDCE (aggressive JS DCE, performs multiple iterations). Clean up
     # whitespace if necessary too.
@@ -2465,11 +2475,11 @@ class Building(object):
           passes.append('minifyWhitespace')
         logger.debug('running post-meta-DCE cleanup on shell code: ' + ' '.join(passes))
         js_file = Building.acorn_optimizer(js_file, passes)
-        # also minify the names used between js and wasm, if we emitting JS (then the JS knows how to load the minified names)
+        # Also minify the names used between js and wasm, if we are emitting an optimized JS+wasm combo (then the JS knows how to load the minified names).
         # If we are building with DECLARE_ASM_MODULE_EXPORTS=0, we must *not* minify the exports from the wasm module, since in DECLARE_ASM_MODULE_EXPORTS=0 mode, the code that
         # reads out the exports is compacted by design that it does not have a chance to unminify the functions. If we are building with DECLARE_ASM_MODULE_EXPORTS=1, we might
         # as well minify wasm exports to regain some of the code size loss that setting DECLARE_ASM_MODULE_EXPORTS=1 caused.
-        if Settings.EMITTING_JS and not Settings.AUTODEBUG:
+        if not Settings.STANDALONE_WASM and not Settings.AUTODEBUG and not Settings.ASSERTIONS and not Settings.SIDE_MODULE and emitting_js:
           js_file = Building.minify_wasm_imports_and_exports(js_file, wasm_file, minify_whitespace=minify_whitespace, minify_exports=Settings.DECLARE_ASM_MODULE_EXPORTS, debug_info=debug_info)
     return js_file
 
@@ -2504,6 +2514,22 @@ class Building(object):
           export = '_' + export
         if export in Building.user_requested_exports or Settings.EXPORT_ALL:
           item['root'] = True
+    # in standalone wasm, always export the memory
+    if Settings.STANDALONE_WASM:
+      graph.append({
+        'export': 'memory',
+        'name': 'emcc$export$memory',
+        'reaches': [],
+        'root': True
+      })
+    # fix wasi imports TODO: support wasm stable with an option?
+    WASI_IMPORTS = set([
+      'fd_write',
+      'proc_exit',
+    ])
+    for item in graph:
+      if 'import' in item and item['import'][1][1:] in WASI_IMPORTS:
+        item['import'][0] = 'wasi_unstable'
     if Settings.WASM_BACKEND:
       # wasm backend's imports are prefixed differently inside the wasm
       for item in graph:
@@ -2736,7 +2762,8 @@ class Building(object):
 
     elif library_name.endswith('.js') and os.path.isfile(path_from_root('src', 'library_' + library_name)):
       library_files += ['library_' + library_name]
-    else:
+    elif not Settings.WASM_BACKEND:
+      # The wasm backend will report these when wasm-ld runs
       exit_with_error('emcc: cannot find library "%s"', library_name)
 
     return library_files
@@ -2756,10 +2783,7 @@ class Building(object):
   def get_binaryen_bin():
     assert Settings.WASM, 'non wasm builds should not ask for binaryen'
     if not BINARYEN_ROOT:
-      # ensure we have the port available if needed.
-      from . import system_libs
-      system_libs.get_port('binaryen', Settings)
-      assert os.path.exists(BINARYEN_ROOT)
+      exit_with_error('BINARYEN_ROOT must be set up in .emscripten')
     return os.path.join(BINARYEN_ROOT, 'bin')
 
 
@@ -3065,7 +3089,8 @@ class WebAssembly(object):
       WebAssembly.lebify(global_base) +
       WebAssembly.lebify(dynamic_base) +
       WebAssembly.lebify(dynamictop_ptr) +
-      WebAssembly.lebify(tempdouble_ptr)
+      WebAssembly.lebify(tempdouble_ptr) +
+      WebAssembly.lebify(int(Settings.STANDALONE_WASM))
 
       # NB: more data can be appended here as long as you increase
       #     the EMSCRIPTEN_METADATA_MINOR
@@ -3180,6 +3205,7 @@ def safe_move(src, dst):
     return
   if dst == '/dev/null':
     return
+  logging.debug('move: %s -> %s', src, dst)
   shutil.move(src, dst)
 
 
@@ -3227,7 +3253,7 @@ def read_and_preprocess(filename, expand_macros=False):
 # worker in -s ASMFS=1 mode.
 def make_fetch_worker(source_file, output_file):
   src = open(source_file, 'r').read()
-  funcs_to_import = ['alignUp', '_emscripten_get_heap_size', '_emscripten_resize_heap', 'stringToUTF8', 'UTF8ToString', 'UTF8ArrayToString', 'intArrayFromString', 'lengthBytesUTF8', 'stringToUTF8Array', '_emscripten_is_main_runtime_thread', '_emscripten_futex_wait']
+  funcs_to_import = ['alignUp', '_emscripten_get_heap_size', '_emscripten_resize_heap', 'stringToUTF8', 'UTF8ToString', 'UTF8ArrayToString', 'intArrayFromString', 'lengthBytesUTF8', 'stringToUTF8Array', '_emscripten_is_main_runtime_thread', '_emscripten_futex_wait', '_emscripten_get_sbrk_ptr']
   asm_funcs_to_import = ['_malloc', '_free', '_sbrk', '___pthread_mutex_lock', '___pthread_mutex_unlock', '_pthread_mutexattr_init', '_pthread_mutex_init']
   function_prologue = '''this.onerror = function(e) {
   console.error(e);
