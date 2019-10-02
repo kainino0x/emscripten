@@ -649,16 +649,20 @@ var LibraryWebGPU = {
     {{{ gpu.makeCheck('descriptor !== 0') }}}
 
     function makeColorAttachment(caPtr) {
+      let loadValue =  WebGPU.LoadOp[
+          {{{ gpu.makeGetU32('caPtr', C_STRUCTS.DawnRenderPassColorAttachmentDescriptor.loadOp) }}}];
+      if (loadValue === 'clear') {
+        loadValue = WebGPU.makeColor(caPtr + {{{ C_STRUCTS.DawnRenderPassColorAttachmentDescriptor.clearColor }}});
+      }
+
       return {
         attachment: WebGPU.mgrTextureView.get(
           {{{ gpu.makeGetU32('caPtr', C_STRUCTS.DawnRenderPassColorAttachmentDescriptor.attachment) }}}),
         resolveTarget: WebGPU.mgrTextureView.get(
           {{{ gpu.makeGetU32('caPtr', C_STRUCTS.DawnRenderPassColorAttachmentDescriptor.resolveTarget) }}}),
-        loadOp: WebGPU.LoadOp[
-          {{{ gpu.makeGetU32('caPtr', C_STRUCTS.DawnRenderPassColorAttachmentDescriptor.loadOp) }}}],
         storeOp: WebGPU.StoreOp[
           {{{ gpu.makeGetU32('caPtr', C_STRUCTS.DawnRenderPassColorAttachmentDescriptor.storeOp) }}}],
-        loadValue: WebGPU.makeColor(caPtr + {{{ C_STRUCTS.DawnRenderPassColorAttachmentDescriptor.clearColor }}}),
+        loadValue,
       };
     }
 
@@ -672,19 +676,28 @@ var LibraryWebGPU = {
 
     function makeDepthStencilAttachment(dsaPtr) {
       if (dsaPtr === 0) return undefined;
+
+      let depthLoadValue = WebGPU.LoadOp[
+          {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.depthLoadOp) }}}];
+      if (depthLoadValue === 'clear') {
+        depthLoadValue = {{{ makeGetValue('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.clearDepth, 'float') }}};
+      }
+
+      let stencilLoadValue = WebGPU.LoadOp[
+          {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.stencilLoadOp) }}}];
+      if (stencilLoadValue === 'clear') {
+        stencilLoadValue = {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.clearStencil) }}};
+      }
+
       return {
         attachment: WebGPU.mgrTextureView.get(
           {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.attachment) }}}),
-        depthLoadOp: WebGPU.LoadOp[
-          {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.depthLoadOp) }}}],
         depthStoreOp: WebGPU.StoreOp[
           {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.depthStoreOp) }}}],
-        depthLoadValue: {{{ makeGetValue('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.clearDepth, 'float') }}},
-        stencilLoadOp: WebGPU.LoadOp[
-          {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.stencilLoadOp) }}}],
+        depthLoadValue,
         stencilStoreOp: WebGPU.StoreOp[
           {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.stencilStoreOp) }}}],
-        stencilLoadValue: {{{ gpu.makeGetU32('dsaPtr', C_STRUCTS.DawnRenderPassDepthStencilAttachmentDescriptor.clearStencil) }}},
+        stencilLoadValue,
       };
     }
 
