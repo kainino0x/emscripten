@@ -450,13 +450,12 @@ var LibraryWebGPU = {
         frontFace: WebGPU.FrontFace[
           {{{ gpu.makeGetU32('rsPtr', C_STRUCTS.DawnRasterizationStateDescriptor.frontFace) }}}],
         cullMode: WebGPU.CullMode[
-          {{{ gpu.makeGetU32('rsPtr', C_STRUCTS.DawnRasterizationStateDescriptor.frontFace) }}}],
+          {{{ gpu.makeGetU32('rsPtr', C_STRUCTS.DawnRasterizationStateDescriptor.cullMode) }}}],
       };
     }
 
     function makeBlendDescriptor(bdPtr) {
       if (bdPtr === 0) return undefined;
-      {{{ gpu.makeCheck('bdPtr !== 0') }}}
       return {
         operation: WebGPU.BlendOperation[
           {{{ gpu.makeGetU32('bdPtr', C_STRUCTS.DawnBlendDescriptor.operation) }}}],
@@ -472,10 +471,8 @@ var LibraryWebGPU = {
       return {
         format: WebGPU.TextureFormat[
           {{{ gpu.makeGetU32('csPtr', C_STRUCTS.DawnColorStateDescriptor.format) }}}],
-        alphaBlend: makeBlendDescriptor(
-          {{{ makeGetValue('csPtr', C_STRUCTS.DawnColorStateDescriptor.alphaBlend, '*') }}}),
-        colorBlend: makeBlendDescriptor(
-          {{{ makeGetValue('csPtr', C_STRUCTS.DawnColorStateDescriptor.colorBlend, '*') }}}),
+        alphaBlend: makeBlendDescriptor(csPtr + {{{ C_STRUCTS.DawnColorStateDescriptor.alphaBlend }}}),
+        colorBlend: makeBlendDescriptor(csPtr + {{{ C_STRUCTS.DawnColorStateDescriptor.colorBlend }}}),
         writeMask: {{{ gpu.makeGetU32('csPtr', C_STRUCTS.DawnColorStateDescriptor.writeMask) }}},
       };
     }
