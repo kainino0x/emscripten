@@ -511,10 +511,8 @@ var LibraryWebGPU = {
         depthWriteEnabled: {{{ gpu.makeGetBool('dssPtr', C_STRUCTS.DawnDepthStencilStateDescriptor.depthWriteEnabled) }}},
         depthCompare: WebGPU.CompareFunction[
           {{{ gpu.makeGetU32('dssPtr', C_STRUCTS.DawnDepthStencilStateDescriptor.depthCompare) }}}],
-        stencilFront: makeStencilStateFace(
-          {{{ makeGetValue('dssPtr', C_STRUCTS.DawnDepthStencilStateDescriptor.stencilFront, '*') }}}),
-        stencilBack: makeStencilStateFace(
-          {{{ makeGetValue('dssPtr', C_STRUCTS.DawnDepthStencilStateDescriptor.stencilBack, '*') }}}),
+        stencilFront: makeStencilStateFace(dssPtr + {{{ C_STRUCTS.DawnDepthStencilStateDescriptor.stencilFront }}}),
+        stencilBack: makeStencilStateFace(dssPtr + {{{ C_STRUCTS.DawnDepthStencilStateDescriptor.stencilBack }}}),
         stencilReadMask: {{{ gpu.makeGetU32('dssPtr', C_STRUCTS.DawnDepthStencilStateDescriptor.stencilReadMask) }}},
         stencilWriteMask: {{{ gpu.makeGetU32('dssPtr', C_STRUCTS.DawnDepthStencilStateDescriptor.stencilWriteMask) }}},
       };
