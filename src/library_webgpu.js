@@ -93,6 +93,7 @@ var LibraryWebGPU = {
 
       {{{ gpu.makeInitManager('Device') }}}
       {{{ gpu.makeInitManager('Queue') }}}
+      {{{ gpu.makeInitManager('Fence') }}}
 
       {{{ gpu.makeInitManager('CommandBuffer') }}}
       {{{ gpu.makeInitManager('CommandEncoder') }}}
@@ -207,6 +208,7 @@ var LibraryWebGPU = {
 
   {{{ gpu.makeReferenceRelease('Device') }}}
   {{{ gpu.makeReferenceRelease('Queue') }}}
+  {{{ gpu.makeReferenceRelease('Fence') }}}
 
   {{{ gpu.makeReferenceRelease('CommandBuffer') }}}
   {{{ gpu.makeReferenceRelease('CommandEncoder') }}}
@@ -624,6 +626,24 @@ var LibraryWebGPU = {
     };
   },
 
+  // dawnFence
+
+  dawnFenceGetCompletedValue(fenceId) {
+    var fence = WebGPU.mgrFence.get(fenceId);
+    return fence.getCompletedValue();
+  },
+
+  dawnFenceOnCompletion(fenceId, value, callback, userdata) {
+    var fence = WebGPU.mgrFence.get(fenceId);
+    fence.onCompletion(value).then(function() {
+      var DAWN_FENCE_COMPLETION_STATUS_SUCCESS = 0;
+      dynCall('vii', callback, [DAWN_FENCE_COMPLETION_STATUS_SUCCESS, userdata]);
+    }, function() {
+      var DAWN_FENCE_COMPLETION_STATUS_ERROR = 1;
+      dynCall('vii', callback, [DAWN_FENCE_COMPLETION_STATUS_ERROR, userdata]);
+    });
+  },
+
   // dawnQueue
 
   dawnQueueSubmit: function(queueId, commandCount, commands) {
@@ -634,6 +654,22 @@ var LibraryWebGPU = {
     var cmds = Array.from(HEAP32.subarray(commands >> 2, (commands >> 2) + commandCount),
       function(id) { return WebGPU.mgrCommandBuffer.get(id); });
     queue.submit(cmds);
+  },
+
+  dawnQueueCreateFence: function(queueId, descriptor) {
+    {{{ gpu.makeCheckDescriptor('descriptor') }}}
+    var desc = {
+      initialValue: {{{ gpu.makeGetU64('descriptor', C_STRUCTS.DawnFenceDescriptor.initialValue) }}},
+    };
+
+    var queue = WebGPU.mgrQueue.get(queueId);
+    return WebGPU.mgrFence.create(queue.createFence(desc));
+  },
+
+  dawnQueueSignalFence: function(queueId, fenceId, signalValue) {
+    var queue = WebGPU.mgrQueue.get(queueId);
+    var fence = WebGPU.mgrFence.get(fenceId);
+    queue.signal(fence, signalValue)
   },
 
   // dawnCommandEncoder
@@ -855,6 +891,10 @@ var LibraryWebGPU = {
   dawnRenderPassEncoderSetScissorRect: function(passId, x, y, w, h) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass.setScissorRect(x, y, w, h);
+  },
+  dawnRenderPassEncoderSetStencilReference: function(passId, reference) {
+    var pass = WebGPU.mgrRenderPassEncoder.get(passId);
+    pass.setStencilReference(reference);
   },
   dawnRenderPassEncoderSetVertexBuffers: function(passId, startSlot, count, buffersPtr, offsetsPtr) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
