@@ -1653,3 +1653,12 @@ function makeModuleReceiveWithVar(localName, moduleName, defaultValue, noAssert)
   }
   return ret;
 }
+
+function makeU64ToNumber(lowName, highName) {
+  var ret = '('
+  if (ASSERTIONS) {
+    ret += 'assert(' + highName + ' < 0x200000), ';
+  }
+  ret += highName + ' * 0x100000000 + ' + lowName + ')\n'
+  return ret;
+}
