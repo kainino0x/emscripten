@@ -926,6 +926,14 @@ class libal(Library):
   src_files = ['al.c']
 
 
+class libdawncpp(MTLibrary):
+  name = 'libdawncpp'
+
+  cflags = ['-std=c++11', '-O2']
+  src_dir = ['system', 'lib', 'dawn']
+  src_files = ['dawncpp.cpp']
+
+
 class libgl(MTLibrary):
   name = 'libgl'
   depends = ['libc']
@@ -1379,6 +1387,9 @@ def calculate(temp_files, in_temp, stdout_, stderr_, forced=[]):
 
   if shared.Settings.STANDALONE_WASM:
     add_library(system_libs_map['libstandalonewasm'])
+
+  if shared.Settings.USE_WEBGPU:
+    add_library(system_libs_map['libdawncpp'])
 
   libs_to_link.sort(key=lambda x: x[0].endswith('.a')) # make sure to put .a files at the end.
 

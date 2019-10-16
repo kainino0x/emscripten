@@ -397,6 +397,7 @@ typedef struct DawnBufferCopyView {
 
 typedef struct DawnBufferDescriptor {
     const void* nextInChain;
+    char const * label;
     DawnBufferUsage usage;
     uint64_t size;
 } DawnBufferDescriptor;
@@ -415,6 +416,7 @@ typedef struct DawnCommandBufferDescriptor {
 
 typedef struct DawnCommandEncoderDescriptor {
     const void* nextInChain;
+    char const * label;
 } DawnCommandEncoderDescriptor;
 
 typedef struct DawnComputePassDescriptor {
@@ -436,6 +438,7 @@ typedef struct DawnExtent3D {
 
 typedef struct DawnFenceDescriptor {
     const void* nextInChain;
+    char const * label;
     uint64_t initialValue;
 } DawnFenceDescriptor;
 
@@ -447,6 +450,7 @@ typedef struct DawnOrigin3D {
 
 typedef struct DawnPipelineLayoutDescriptor {
     const void* nextInChain;
+    char const * label;
     uint32_t bindGroupLayoutCount;
     DawnBindGroupLayout const * bindGroupLayouts;
 } DawnPipelineLayoutDescriptor;
@@ -468,10 +472,12 @@ typedef struct DawnRasterizationStateDescriptor {
 
 typedef struct DawnRenderBundleDescriptor {
     const void* nextInChain;
+    char const * label;
 } DawnRenderBundleDescriptor;
 
 typedef struct DawnRenderBundleEncoderDescriptor {
     const void* nextInChain;
+    char const * label;
     uint32_t colorFormatsCount;
     DawnTextureFormat const * colorFormats;
     DawnTextureFormat depthStencilFormat;
@@ -490,6 +496,7 @@ typedef struct DawnRenderPassDepthStencilAttachmentDescriptor {
 
 typedef struct DawnSamplerDescriptor {
     const void* nextInChain;
+    char const * label;
     DawnAddressMode addressModeU;
     DawnAddressMode addressModeV;
     DawnAddressMode addressModeW;
@@ -503,6 +510,7 @@ typedef struct DawnSamplerDescriptor {
 
 typedef struct DawnShaderModuleDescriptor {
     const void* nextInChain;
+    char const * label;
     uint32_t codeSize;
     uint32_t const * code;
 } DawnShaderModuleDescriptor;
@@ -516,11 +524,13 @@ typedef struct DawnStencilStateFaceDescriptor {
 
 typedef struct DawnSwapChainDescriptor {
     const void* nextInChain;
+    char const * label;
     uint64_t implementation;
 } DawnSwapChainDescriptor;
 
 typedef struct DawnTextureViewDescriptor {
     const void* nextInChain;
+    char const * label;
     DawnTextureFormat format;
     DawnTextureViewDimension dimension;
     uint32_t baseMipLevel;
@@ -538,6 +548,7 @@ typedef struct DawnVertexAttributeDescriptor {
 
 typedef struct DawnBindGroupDescriptor {
     const void* nextInChain;
+    char const * label;
     DawnBindGroupLayout layout;
     uint32_t bindingCount;
     DawnBindGroupBinding const * bindings;
@@ -545,6 +556,7 @@ typedef struct DawnBindGroupDescriptor {
 
 typedef struct DawnBindGroupLayoutDescriptor {
     const void* nextInChain;
+    char const * label;
     uint32_t bindingCount;
     DawnBindGroupLayoutBinding const * bindings;
 } DawnBindGroupLayoutDescriptor;
@@ -559,6 +571,7 @@ typedef struct DawnColorStateDescriptor {
 
 typedef struct DawnComputePipelineDescriptor {
     const void* nextInChain;
+    char const * label;
     DawnPipelineLayout layout;
     DawnPipelineStageDescriptor computeStage;
 } DawnComputePipelineDescriptor;
@@ -592,6 +605,7 @@ typedef struct DawnTextureCopyView {
 
 typedef struct DawnTextureDescriptor {
     const void* nextInChain;
+    char const * label;
     DawnTextureUsage usage;
     DawnTextureDimension dimension;
     DawnExtent3D size;
@@ -609,6 +623,7 @@ typedef struct DawnVertexBufferDescriptor {
 } DawnVertexBufferDescriptor;
 
 typedef struct DawnRenderPassDescriptor {
+    char const * label;
     uint32_t colorAttachmentCount;
     DawnRenderPassColorAttachmentDescriptor const * colorAttachments;
     DawnRenderPassDepthStencilAttachmentDescriptor const * depthStencilAttachment;
@@ -623,6 +638,7 @@ typedef struct DawnVertexInputDescriptor {
 
 typedef struct DawnRenderPipelineDescriptor {
     const void* nextInChain;
+    char const * label;
     DawnPipelineLayout layout;
     DawnPipelineStageDescriptor vertexStage;
     DawnPipelineStageDescriptor const * fragmentStage;
@@ -723,6 +739,7 @@ typedef DawnSampler (*DawnProcDeviceCreateSampler)(DawnDevice device, DawnSample
 typedef DawnShaderModule (*DawnProcDeviceCreateShaderModule)(DawnDevice device, DawnShaderModuleDescriptor const * descriptor);
 typedef DawnSwapChain (*DawnProcDeviceCreateSwapChain)(DawnDevice device, DawnSwapChainDescriptor const * descriptor);
 typedef DawnTexture (*DawnProcDeviceCreateTexture)(DawnDevice device, DawnTextureDescriptor const * descriptor);
+typedef void (*DawnProcDeviceInjectError)(DawnDevice device, DawnErrorType type, char const * message);
 typedef void (*DawnProcDeviceTick)(DawnDevice device);
 typedef void (*DawnProcDevicePushErrorScope)(DawnDevice device, DawnErrorFilter filter);
 typedef void (*DawnProcDeviceCreateBufferMappedAsync)(DawnDevice device, DawnBufferDescriptor const * descriptor, DawnBufferCreateMappedCallback callback, void * userdata);
@@ -878,6 +895,7 @@ struct DawnProcTable_s {
     DawnProcDeviceCreateShaderModule deviceCreateShaderModule;
     DawnProcDeviceCreateSwapChain deviceCreateSwapChain;
     DawnProcDeviceCreateTexture deviceCreateTexture;
+    DawnProcDeviceInjectError deviceInjectError;
     DawnProcDeviceTick deviceTick;
     DawnProcDevicePushErrorScope devicePushErrorScope;
     DawnProcDeviceCreateBufferMappedAsync deviceCreateBufferMappedAsync;
@@ -1035,6 +1053,7 @@ DAWN_EXPORT DawnSampler dawnDeviceCreateSampler(DawnDevice device, DawnSamplerDe
 DAWN_EXPORT DawnShaderModule dawnDeviceCreateShaderModule(DawnDevice device, DawnShaderModuleDescriptor const * descriptor);
 DAWN_EXPORT DawnSwapChain dawnDeviceCreateSwapChain(DawnDevice device, DawnSwapChainDescriptor const * descriptor);
 DAWN_EXPORT DawnTexture dawnDeviceCreateTexture(DawnDevice device, DawnTextureDescriptor const * descriptor);
+DAWN_EXPORT void dawnDeviceInjectError(DawnDevice device, DawnErrorType type, char const * message);
 DAWN_EXPORT void dawnDeviceTick(DawnDevice device);
 DAWN_EXPORT void dawnDevicePushErrorScope(DawnDevice device, DawnErrorFilter filter);
 DAWN_EXPORT void dawnDeviceCreateBufferMappedAsync(DawnDevice device, DawnBufferDescriptor const * descriptor, DawnBufferCreateMappedCallback callback, void * userdata);
