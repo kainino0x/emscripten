@@ -93,6 +93,7 @@ var LibraryWebGPU = {
 
       {{{ gpu.makeInitManager('Device') }}}
       {{{ gpu.makeInitManager('Queue') }}}
+      {{{ gpu.makeInitManager('Fence') }}}
 
       {{{ gpu.makeInitManager('CommandBuffer') }}}
       {{{ gpu.makeInitManager('CommandEncoder') }}}
@@ -207,6 +208,7 @@ var LibraryWebGPU = {
 
   {{{ gpu.makeReferenceRelease('Device') }}}
   {{{ gpu.makeReferenceRelease('Queue') }}}
+  {{{ gpu.makeReferenceRelease('Fence') }}}
 
   {{{ gpu.makeReferenceRelease('CommandBuffer') }}}
   {{{ gpu.makeReferenceRelease('CommandEncoder') }}}
@@ -624,7 +626,45 @@ var LibraryWebGPU = {
     };
   },
 
+  // dawnFence
+
+  dawnFenceOnCompletion: function(fenceId, completionValue_l, completionValue_h, callback, userdata) {
+    var fence = WebGPU.mgrFence.get(fenceId);
+    var completionValue = {{{ makeU64ToNumber('completionValue_l', 'completionValue_h') }}};
+
+    var DAWN_FENCE_COMPLETION_STATUS_SUCCESS = 0;
+    var DAWN_FENCE_COMPLETION_STATUS_ERROR = 1;
+
+    fence.onCompletion(completionValue).then(function() {
+      dynCall('vii', callback, [DAWN_FENCE_COMPLETION_STATUS_SUCCESS, userdata]);
+    }, function() {
+      dynCall('vii', callback, [DAWN_FENCE_COMPLETION_STATUS_ERROR, userdata]);
+    });
+  },
+
   // dawnQueue
+
+  dawnQueueCreateFence: function(queueId, descriptor) {
+    var queue = WebGPU.mgrQueue.get(queueId);
+
+    var desc;
+    if (descriptor !== 0) {
+      {{{ gpu.makeCheckDescriptor('descriptor') }}}
+      desc = {
+        // TODO(kainino0x): label
+        initialValue: {{{ gpu.makeGetU64('descriptor', C_STRUCTS.DawnFenceDescriptor.initialValue) }}},
+      };
+    }
+
+    return WebGPU.mgrFence.create(queue.createFence(desc));
+  },
+
+  dawnQueueSignal: function(queueId, fenceId, signalValue_l, signalValue_h) {
+    var queue = WebGPU.mgrQueue.get(queueId);
+    var fence = WebGPU.mgrFence.get(fenceId);
+    var signalValue = {{{ makeU64ToNumber('signalValue_l', 'signalValue_h') }}};
+    queue.signal(fence, signalValue);
+  },
 
   dawnQueueSubmit: function(queueId, commandCount, commands) {
 #if ASSERTIONS
@@ -856,6 +896,10 @@ var LibraryWebGPU = {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass.setScissorRect(x, y, w, h);
   },
+  dawnRenderPassEncoderSetStencilReference: function(passId, reference) {
+    var pass = WebGPU.mgrRenderPassEncoder.get(passId);
+    pass.setStencilReference(reference);
+  },
   dawnRenderPassEncoderSetVertexBuffers: function(passId, startSlot, count, buffersPtr, offsetsPtr) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
 
@@ -883,6 +927,32 @@ var LibraryWebGPU = {
   dawnRenderPassEncoderEndPass: function(passId) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass.endPass();
+  },
+
+  // Unsupported (won't be implemented)
+
+  dawnDeviceTick: function() {
+    assert(false, 'dawnDeviceTick is unsupported (use requestAnimationFrame via html5.h instead)');
+  },
+  dawnDeviceCreateSwapChain: function() {
+    assert(false, 'dawnSwapChain is unsupported (use html5.h instead)');
+    return 0;
+  },
+  dawnSwapChainGetNextTexture: function() {
+    assert(false, 'dawnSwapChain is unsupported (use html5.h instead)');
+    return 0;
+  },
+  dawnSwapChainConfigure: function() {
+    assert(false, 'dawnSwapChain is unsupported (use html5.h instead)');
+  },
+  dawnSwapChainPresent: function() {
+    assert(false, 'dawnSwapChain is unsupported (use html5.h instead)');
+  },
+  dawnSwapChainReference: function() {
+    assert(false, 'dawnSwapChain is unsupported (use html5.h instead)');
+  },
+  dawnSwapChainRelease: function() {
+    assert(false, 'dawnSwapChain is unsupported (use html5.h instead)');
   },
 };
 
