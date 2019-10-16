@@ -111,6 +111,21 @@ var LibraryWebGPU = {
       {{{ gpu.makeInitManager('ShaderModule') }}}
     },
 
+    trackMapWrite: function(obj, mapped) {
+      var data = _malloc(mapped.byteLength);
+      HEAPU8.fill(0, data, mapped.byteLength);
+      obj.mapWriteSrc = data;
+      obj.mapWriteDst = mapped;
+    },
+    trackUnmap: function(obj) {
+      if (obj.mapWriteSrc) {
+        new Uint8Array(obj.mapWriteDst).set(HEAPU8.subarray(obj.mapWriteSrc, obj.mapWriteSrc + obj.mapWriteDst.byteLength));
+        _free(obj.mapWriteSrc);
+      }
+      obj.mapWriteSrc = undefined;
+      obj.mapWriteDst = undefined;
+    },
+
     makeColor: function(ptr) {
       return {
         r: {{{ makeGetValue('ptr', 0, 'float') }}},
@@ -257,6 +272,32 @@ var LibraryWebGPU = {
 
     var device = WebGPU.mgrDevice.get(deviceId);
     return WebGPU.mgrBuffer.create(device.createBuffer(desc));
+  },
+
+  dawnDeviceCreateBufferMapped: function(returnPtr, deviceId, descriptor) {
+    {{{ gpu.makeCheckDescriptor('descriptor') }}}
+    var desc = {
+      usage: {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnBufferDescriptor.usage) }}},
+      size: {{{ gpu.makeGetU64('descriptor', C_STRUCTS.DawnBufferDescriptor.size) }}},
+    };
+
+    var device = WebGPU.mgrDevice.get(deviceId);
+    var bufferMapped = device.createBufferMapped(desc);
+    var buffer = bufferMapped[0];
+    var mapped = bufferMapped[1];
+
+    var bufferId = WebGPU.mgrBuffer.create(buffer);
+    // TODO(kainino0x): don't do extra array lookup
+    var bufferObj = WebGPU.mgrBuffer.objects[bufferId];
+    WebGPU.trackMapWrite(bufferObj, mapped);
+
+    var dataLength_h = (mapped.byteLength / 0x100000000) | 0;
+    var dataLength_l = mapped.byteLength | 0;
+
+    {{{ makeSetValue('returnPtr', C_STRUCTS.DawnCreateBufferMappedResult.buffer, 'bufferId', '*') }}}
+    {{{ makeSetValue('returnPtr', C_STRUCTS.DawnCreateBufferMappedResult.dataLength + 0, 'dataLength_l', 'i32') }}}
+    {{{ makeSetValue('returnPtr', C_STRUCTS.DawnCreateBufferMappedResult.dataLength + 4, 'dataLength_h', 'i32') }}}
+    {{{ makeSetValue('returnPtr', C_STRUCTS.DawnCreateBufferMappedResult.data, 'bufferObj.mapWriteSrc', '*') }}}
   },
 
   dawnDeviceCreateTexture: function(deviceId, descriptor) {
@@ -811,15 +852,13 @@ var LibraryWebGPU = {
   },
 
   dawnBufferMapWriteAsync: function(bufferId, callback, userdata) {
-    var e = WebGPU.mgrBuffer.objects[bufferId];
-    var buffer = e.object;
+    var bufferObj = WebGPU.mgrBuffer.objects[bufferId];
+    var buffer = bufferObj.object;
 
+    var DAWN_BUFFER_MAP_ASYNC_STATUS_SUCCESS = 0;
+    var DAWN_BUFFER_MAP_ASYNC_STATUS_ERROR = 1;
     buffer.mapWriteAsync().then(function(mapped) {
-      var DAWN_BUFFER_MAP_ASYNC_STATUS_SUCCESS = 0;
-      var data = _malloc(mapped.byteLength);
-      HEAPU8.fill(0, data, mapped.byteLength);
-      e.mapWriteSrc = data;
-      e.mapWriteDst = mapped;
+      WebGPU.trackMapWrite(bufferObj, mapped);
 
       var dataLength_h = (mapped.byteLength / 0x100000000) | 0;
       var dataLength_l = mapped.byteLength | 0;
@@ -827,20 +866,14 @@ var LibraryWebGPU = {
       dynCall('viiji', callback, [DAWN_BUFFER_MAP_ASYNC_STATUS_SUCCESS, data, dataLength_l, dataLength_h, userdata]);
     }, function() {
       // TODO(kainino0x): Figure out how to pick other error status values.
-      var DAWN_BUFFER_MAP_ASYNC_STATUS_ERROR = 1;
       dynCall('viiji', callback, [DAWN_BUFFER_MAP_ASYNC_STATUS_ERROR, 0, 0, 0, userdata]);
     });
   },
 
   dawnBufferUnmap: function(bufferId) {
-    var e = WebGPU.mgrBuffer.objects[bufferId];
-    if (e.mapWriteSrc) {
-      new Uint8Array(e.mapWriteDst).set(HEAPU8.subarray(e.mapWriteSrc, e.mapWriteSrc + e.mapWriteDst.byteLength));
-      _free(e.mapWriteSrc);
-    }
-    e.mapWriteSrc = undefined;
-    e.mapWriteDst = undefined;
-    e.object.unmap();
+    var bufferObj = WebGPU.mgrBuffer.objects[bufferId];
+    WebGPU.trackUnmap(bufferObj);
+    bufferObj.object.unmap();
   },
 
   // dawnTexture
