@@ -798,7 +798,7 @@ var LibraryWebGPU = {
     buffer.mapReadAsync().then(function(mapped) {
       var DAWN_BUFFER_MAP_ASYNC_STATUS_SUCCESS = 0;
       var data = _malloc(mapped.byteLength);
-      HEAP8.set(new Uint8Array(mapped), data);
+      HEAPU8.set(new Uint8Array(mapped), data);
       var dataLength_h = (mapped.byteLength / 0x100000000) | 0;
       var dataLength_l = mapped.byteLength | 0;
       // DawnBufferMapAsyncStatus status, const void* data, uint64_t dataLength, void* userdata
@@ -817,7 +817,7 @@ var LibraryWebGPU = {
     buffer.mapWriteAsync().then(function(mapped) {
       var DAWN_BUFFER_MAP_ASYNC_STATUS_SUCCESS = 0;
       var data = _malloc(mapped.byteLength);
-      HEAP8.fill(0, data, mapped.byteLength);
+      HEAPU8.fill(0, data, mapped.byteLength);
       e.mapWriteSrc = data;
       e.mapWriteDst = mapped;
 
@@ -835,7 +835,8 @@ var LibraryWebGPU = {
   dawnBufferUnmap: function(bufferId) {
     var e = WebGPU.mgrBuffer.objects[bufferId];
     if (e.mapWriteSrc) {
-      new Uint8Array(e.mapWriteDst).set(HEAP8.subarray(e.mapWriteSrc, e.mapWriteSrc + e.mapWriteDst.byteLength));
+      new Uint8Array(e.mapWriteDst).set(HEAPU8.subarray(e.mapWriteSrc, e.mapWriteSrc + e.mapWriteDst.byteLength));
+      _free(e.mapWriteSrc);
     }
     e.mapWriteSrc = undefined;
     e.mapWriteDst = undefined;
