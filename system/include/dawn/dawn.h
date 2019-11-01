@@ -44,14 +44,14 @@ typedef struct DawnSwapChainImpl* DawnSwapChain;
 typedef struct DawnTextureImpl* DawnTexture;
 typedef struct DawnTextureViewImpl* DawnTextureView;
 
-typedef enum {
+typedef enum DawnAddressMode {
     DAWN_ADDRESS_MODE_REPEAT = 0x00000000,
     DAWN_ADDRESS_MODE_MIRROR_REPEAT = 0x00000001,
     DAWN_ADDRESS_MODE_CLAMP_TO_EDGE = 0x00000002,
     DAWN_ADDRESS_MODE_FORCE32 = 0x7FFFFFFF
 } DawnAddressMode;
 
-typedef enum {
+typedef enum DawnBindingType {
     DAWN_BINDING_TYPE_UNIFORM_BUFFER = 0x00000000,
     DAWN_BINDING_TYPE_STORAGE_BUFFER = 0x00000001,
     DAWN_BINDING_TYPE_READONLY_STORAGE_BUFFER = 0x00000002,
@@ -61,7 +61,7 @@ typedef enum {
     DAWN_BINDING_TYPE_FORCE32 = 0x7FFFFFFF
 } DawnBindingType;
 
-typedef enum {
+typedef enum DawnBlendFactor {
     DAWN_BLEND_FACTOR_ZERO = 0x00000000,
     DAWN_BLEND_FACTOR_ONE = 0x00000001,
     DAWN_BLEND_FACTOR_SRC_COLOR = 0x00000002,
@@ -78,7 +78,7 @@ typedef enum {
     DAWN_BLEND_FACTOR_FORCE32 = 0x7FFFFFFF
 } DawnBlendFactor;
 
-typedef enum {
+typedef enum DawnBlendOperation {
     DAWN_BLEND_OPERATION_ADD = 0x00000000,
     DAWN_BLEND_OPERATION_SUBTRACT = 0x00000001,
     DAWN_BLEND_OPERATION_REVERSE_SUBTRACT = 0x00000002,
@@ -87,7 +87,7 @@ typedef enum {
     DAWN_BLEND_OPERATION_FORCE32 = 0x7FFFFFFF
 } DawnBlendOperation;
 
-typedef enum {
+typedef enum DawnBufferMapAsyncStatus {
     DAWN_BUFFER_MAP_ASYNC_STATUS_SUCCESS = 0x00000000,
     DAWN_BUFFER_MAP_ASYNC_STATUS_ERROR = 0x00000001,
     DAWN_BUFFER_MAP_ASYNC_STATUS_UNKNOWN = 0x00000002,
@@ -95,7 +95,7 @@ typedef enum {
     DAWN_BUFFER_MAP_ASYNC_STATUS_FORCE32 = 0x7FFFFFFF
 } DawnBufferMapAsyncStatus;
 
-typedef enum {
+typedef enum DawnCompareFunction {
     DAWN_COMPARE_FUNCTION_NEVER = 0x00000000,
     DAWN_COMPARE_FUNCTION_LESS = 0x00000001,
     DAWN_COMPARE_FUNCTION_LESS_EQUAL = 0x00000002,
@@ -107,21 +107,21 @@ typedef enum {
     DAWN_COMPARE_FUNCTION_FORCE32 = 0x7FFFFFFF
 } DawnCompareFunction;
 
-typedef enum {
+typedef enum DawnCullMode {
     DAWN_CULL_MODE_NONE = 0x00000000,
     DAWN_CULL_MODE_FRONT = 0x00000001,
     DAWN_CULL_MODE_BACK = 0x00000002,
     DAWN_CULL_MODE_FORCE32 = 0x7FFFFFFF
 } DawnCullMode;
 
-typedef enum {
+typedef enum DawnErrorFilter {
     DAWN_ERROR_FILTER_NONE = 0x00000000,
     DAWN_ERROR_FILTER_VALIDATION = 0x00000001,
     DAWN_ERROR_FILTER_OUT_OF_MEMORY = 0x00000002,
     DAWN_ERROR_FILTER_FORCE32 = 0x7FFFFFFF
 } DawnErrorFilter;
 
-typedef enum {
+typedef enum DawnErrorType {
     DAWN_ERROR_TYPE_NO_ERROR = 0x00000000,
     DAWN_ERROR_TYPE_VALIDATION = 0x00000001,
     DAWN_ERROR_TYPE_OUT_OF_MEMORY = 0x00000002,
@@ -130,7 +130,7 @@ typedef enum {
     DAWN_ERROR_TYPE_FORCE32 = 0x7FFFFFFF
 } DawnErrorType;
 
-typedef enum {
+typedef enum DawnFenceCompletionStatus {
     DAWN_FENCE_COMPLETION_STATUS_SUCCESS = 0x00000000,
     DAWN_FENCE_COMPLETION_STATUS_ERROR = 0x00000001,
     DAWN_FENCE_COMPLETION_STATUS_UNKNOWN = 0x00000002,
@@ -138,37 +138,37 @@ typedef enum {
     DAWN_FENCE_COMPLETION_STATUS_FORCE32 = 0x7FFFFFFF
 } DawnFenceCompletionStatus;
 
-typedef enum {
+typedef enum DawnFilterMode {
     DAWN_FILTER_MODE_NEAREST = 0x00000000,
     DAWN_FILTER_MODE_LINEAR = 0x00000001,
     DAWN_FILTER_MODE_FORCE32 = 0x7FFFFFFF
 } DawnFilterMode;
 
-typedef enum {
+typedef enum DawnFrontFace {
     DAWN_FRONT_FACE_CCW = 0x00000000,
     DAWN_FRONT_FACE_CW = 0x00000001,
     DAWN_FRONT_FACE_FORCE32 = 0x7FFFFFFF
 } DawnFrontFace;
 
-typedef enum {
+typedef enum DawnIndexFormat {
     DAWN_INDEX_FORMAT_UINT16 = 0x00000000,
     DAWN_INDEX_FORMAT_UINT32 = 0x00000001,
     DAWN_INDEX_FORMAT_FORCE32 = 0x7FFFFFFF
 } DawnIndexFormat;
 
-typedef enum {
+typedef enum DawnInputStepMode {
     DAWN_INPUT_STEP_MODE_VERTEX = 0x00000000,
     DAWN_INPUT_STEP_MODE_INSTANCE = 0x00000001,
     DAWN_INPUT_STEP_MODE_FORCE32 = 0x7FFFFFFF
 } DawnInputStepMode;
 
-typedef enum {
+typedef enum DawnLoadOp {
     DAWN_LOAD_OP_CLEAR = 0x00000000,
     DAWN_LOAD_OP_LOAD = 0x00000001,
     DAWN_LOAD_OP_FORCE32 = 0x7FFFFFFF
 } DawnLoadOp;
 
-typedef enum {
+typedef enum DawnPrimitiveTopology {
     DAWN_PRIMITIVE_TOPOLOGY_POINT_LIST = 0x00000000,
     DAWN_PRIMITIVE_TOPOLOGY_LINE_LIST = 0x00000001,
     DAWN_PRIMITIVE_TOPOLOGY_LINE_STRIP = 0x00000002,
@@ -177,7 +177,7 @@ typedef enum {
     DAWN_PRIMITIVE_TOPOLOGY_FORCE32 = 0x7FFFFFFF
 } DawnPrimitiveTopology;
 
-typedef enum {
+typedef enum DawnStencilOperation {
     DAWN_STENCIL_OPERATION_KEEP = 0x00000000,
     DAWN_STENCIL_OPERATION_ZERO = 0x00000001,
     DAWN_STENCIL_OPERATION_REPLACE = 0x00000002,
@@ -189,34 +189,34 @@ typedef enum {
     DAWN_STENCIL_OPERATION_FORCE32 = 0x7FFFFFFF
 } DawnStencilOperation;
 
-typedef enum {
+typedef enum DawnStoreOp {
     DAWN_STORE_OP_STORE = 0x00000000,
     DAWN_STORE_OP_CLEAR = 0x00000001,
     DAWN_STORE_OP_FORCE32 = 0x7FFFFFFF
 } DawnStoreOp;
 
-typedef enum {
+typedef enum DawnTextureAspect {
     DAWN_TEXTURE_ASPECT_ALL = 0x00000000,
     DAWN_TEXTURE_ASPECT_STENCIL_ONLY = 0x00000001,
     DAWN_TEXTURE_ASPECT_DEPTH_ONLY = 0x00000002,
     DAWN_TEXTURE_ASPECT_FORCE32 = 0x7FFFFFFF
 } DawnTextureAspect;
 
-typedef enum {
+typedef enum DawnTextureComponentType {
     DAWN_TEXTURE_COMPONENT_TYPE_FLOAT = 0x00000000,
     DAWN_TEXTURE_COMPONENT_TYPE_SINT = 0x00000001,
     DAWN_TEXTURE_COMPONENT_TYPE_UINT = 0x00000002,
     DAWN_TEXTURE_COMPONENT_TYPE_FORCE32 = 0x7FFFFFFF
 } DawnTextureComponentType;
 
-typedef enum {
+typedef enum DawnTextureDimension {
     DAWN_TEXTURE_DIMENSION_1D = 0x00000000,
     DAWN_TEXTURE_DIMENSION_2D = 0x00000001,
     DAWN_TEXTURE_DIMENSION_3D = 0x00000002,
     DAWN_TEXTURE_DIMENSION_FORCE32 = 0x7FFFFFFF
 } DawnTextureDimension;
 
-typedef enum {
+typedef enum DawnTextureFormat {
     DAWN_TEXTURE_FORMAT_UNDEFINED = 0x00000000,
     DAWN_TEXTURE_FORMAT_R8_UNORM = 0x00000001,
     DAWN_TEXTURE_FORMAT_R8_SNORM = 0x00000002,
@@ -273,7 +273,7 @@ typedef enum {
     DAWN_TEXTURE_FORMAT_FORCE32 = 0x7FFFFFFF
 } DawnTextureFormat;
 
-typedef enum {
+typedef enum DawnTextureViewDimension {
     DAWN_TEXTURE_VIEW_DIMENSION_UNDEFINED = 0x00000000,
     DAWN_TEXTURE_VIEW_DIMENSION_1D = 0x00000001,
     DAWN_TEXTURE_VIEW_DIMENSION_2D = 0x00000002,
@@ -284,7 +284,7 @@ typedef enum {
     DAWN_TEXTURE_VIEW_DIMENSION_FORCE32 = 0x7FFFFFFF
 } DawnTextureViewDimension;
 
-typedef enum {
+typedef enum DawnVertexFormat {
     DAWN_VERTEX_FORMAT_UCHAR2 = 0x00000000,
     DAWN_VERTEX_FORMAT_UCHAR4 = 0x00000001,
     DAWN_VERTEX_FORMAT_CHAR2 = 0x00000002,
@@ -318,7 +318,7 @@ typedef enum {
     DAWN_VERTEX_FORMAT_FORCE32 = 0x7FFFFFFF
 } DawnVertexFormat;
 
-typedef enum {
+typedef enum DawnBufferUsage {
     DAWN_BUFFER_USAGE_NONE = 0x00000000,
     DAWN_BUFFER_USAGE_MAP_READ = 0x00000001,
     DAWN_BUFFER_USAGE_MAP_WRITE = 0x00000002,
@@ -332,7 +332,7 @@ typedef enum {
     DAWN_BUFFER_USAGE_FORCE32 = 0x7FFFFFFF
 } DawnBufferUsage;
 
-typedef enum {
+typedef enum DawnColorWriteMask {
     DAWN_COLOR_WRITE_MASK_NONE = 0x00000000,
     DAWN_COLOR_WRITE_MASK_RED = 0x00000001,
     DAWN_COLOR_WRITE_MASK_GREEN = 0x00000002,
@@ -342,7 +342,7 @@ typedef enum {
     DAWN_COLOR_WRITE_MASK_FORCE32 = 0x7FFFFFFF
 } DawnColorWriteMask;
 
-typedef enum {
+typedef enum DawnShaderStage {
     DAWN_SHADER_STAGE_NONE = 0x00000000,
     DAWN_SHADER_STAGE_VERTEX = 0x00000001,
     DAWN_SHADER_STAGE_FRAGMENT = 0x00000002,
@@ -350,7 +350,7 @@ typedef enum {
     DAWN_SHADER_STAGE_FORCE32 = 0x7FFFFFFF
 } DawnShaderStage;
 
-typedef enum {
+typedef enum DawnTextureUsage {
     DAWN_TEXTURE_USAGE_NONE = 0x00000000,
     DAWN_TEXTURE_USAGE_COPY_SRC = 0x00000001,
     DAWN_TEXTURE_USAGE_COPY_DST = 0x00000002,
@@ -388,7 +388,7 @@ typedef struct DawnBlendDescriptor {
 } DawnBlendDescriptor;
 
 typedef struct DawnBufferCopyView {
-    const void* nextInChain;
+    void const * nextInChain;
     DawnBuffer buffer;
     uint64_t offset;
     uint32_t rowPitch;
@@ -396,7 +396,7 @@ typedef struct DawnBufferCopyView {
 } DawnBufferCopyView;
 
 typedef struct DawnBufferDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     DawnBufferUsage usage;
     uint64_t size;
@@ -410,17 +410,17 @@ typedef struct DawnColor {
 } DawnColor;
 
 typedef struct DawnCommandBufferDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
 } DawnCommandBufferDescriptor;
 
 typedef struct DawnCommandEncoderDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
 } DawnCommandEncoderDescriptor;
 
 typedef struct DawnComputePassDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
 } DawnComputePassDescriptor;
 
@@ -437,7 +437,7 @@ typedef struct DawnExtent3D {
 } DawnExtent3D;
 
 typedef struct DawnFenceDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     uint64_t initialValue;
 } DawnFenceDescriptor;
@@ -449,20 +449,20 @@ typedef struct DawnOrigin3D {
 } DawnOrigin3D;
 
 typedef struct DawnPipelineLayoutDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     uint32_t bindGroupLayoutCount;
     DawnBindGroupLayout const * bindGroupLayouts;
 } DawnPipelineLayoutDescriptor;
 
-typedef struct DawnPipelineStageDescriptor {
-    const void* nextInChain;
+typedef struct DawnProgrammableStageDescriptor {
+    void const * nextInChain;
     DawnShaderModule module;
     char const * entryPoint;
-} DawnPipelineStageDescriptor;
+} DawnProgrammableStageDescriptor;
 
 typedef struct DawnRasterizationStateDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     DawnFrontFace frontFace;
     DawnCullMode cullMode;
     int32_t depthBias;
@@ -471,12 +471,12 @@ typedef struct DawnRasterizationStateDescriptor {
 } DawnRasterizationStateDescriptor;
 
 typedef struct DawnRenderBundleDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
 } DawnRenderBundleDescriptor;
 
 typedef struct DawnRenderBundleEncoderDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     uint32_t colorFormatsCount;
     DawnTextureFormat const * colorFormats;
@@ -495,7 +495,7 @@ typedef struct DawnRenderPassDepthStencilAttachmentDescriptor {
 } DawnRenderPassDepthStencilAttachmentDescriptor;
 
 typedef struct DawnSamplerDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     DawnAddressMode addressModeU;
     DawnAddressMode addressModeV;
@@ -509,7 +509,7 @@ typedef struct DawnSamplerDescriptor {
 } DawnSamplerDescriptor;
 
 typedef struct DawnShaderModuleDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     uint32_t codeSize;
     uint32_t const * code;
@@ -523,13 +523,13 @@ typedef struct DawnStencilStateFaceDescriptor {
 } DawnStencilStateFaceDescriptor;
 
 typedef struct DawnSwapChainDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     uint64_t implementation;
 } DawnSwapChainDescriptor;
 
 typedef struct DawnTextureViewDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     DawnTextureFormat format;
     DawnTextureViewDimension dimension;
@@ -547,7 +547,7 @@ typedef struct DawnVertexAttributeDescriptor {
 } DawnVertexAttributeDescriptor;
 
 typedef struct DawnBindGroupDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     DawnBindGroupLayout layout;
     uint32_t bindingCount;
@@ -555,14 +555,14 @@ typedef struct DawnBindGroupDescriptor {
 } DawnBindGroupDescriptor;
 
 typedef struct DawnBindGroupLayoutDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     uint32_t bindingCount;
     DawnBindGroupLayoutBinding const * bindings;
 } DawnBindGroupLayoutDescriptor;
 
 typedef struct DawnColorStateDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     DawnTextureFormat format;
     DawnBlendDescriptor alphaBlend;
     DawnBlendDescriptor colorBlend;
@@ -570,14 +570,14 @@ typedef struct DawnColorStateDescriptor {
 } DawnColorStateDescriptor;
 
 typedef struct DawnComputePipelineDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     DawnPipelineLayout layout;
-    DawnPipelineStageDescriptor computeStage;
+    DawnProgrammableStageDescriptor computeStage;
 } DawnComputePipelineDescriptor;
 
 typedef struct DawnDepthStencilStateDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     DawnTextureFormat format;
     bool depthWriteEnabled;
     DawnCompareFunction depthCompare;
@@ -596,7 +596,7 @@ typedef struct DawnRenderPassColorAttachmentDescriptor {
 } DawnRenderPassColorAttachmentDescriptor;
 
 typedef struct DawnTextureCopyView {
-    const void* nextInChain;
+    void const * nextInChain;
     DawnTexture texture;
     uint32_t mipLevel;
     uint32_t arrayLayer;
@@ -604,7 +604,7 @@ typedef struct DawnTextureCopyView {
 } DawnTextureCopyView;
 
 typedef struct DawnTextureDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     DawnTextureUsage usage;
     DawnTextureDimension dimension;
@@ -623,6 +623,7 @@ typedef struct DawnVertexBufferDescriptor {
 } DawnVertexBufferDescriptor;
 
 typedef struct DawnRenderPassDescriptor {
+    void const * nextInChain;
     char const * label;
     uint32_t colorAttachmentCount;
     DawnRenderPassColorAttachmentDescriptor const * colorAttachments;
@@ -630,18 +631,18 @@ typedef struct DawnRenderPassDescriptor {
 } DawnRenderPassDescriptor;
 
 typedef struct DawnVertexInputDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     DawnIndexFormat indexFormat;
     uint32_t bufferCount;
     DawnVertexBufferDescriptor const * buffers;
 } DawnVertexInputDescriptor;
 
 typedef struct DawnRenderPipelineDescriptor {
-    const void* nextInChain;
+    void const * nextInChain;
     char const * label;
     DawnPipelineLayout layout;
-    DawnPipelineStageDescriptor vertexStage;
-    DawnPipelineStageDescriptor const * fragmentStage;
+    DawnProgrammableStageDescriptor vertexStage;
+    DawnProgrammableStageDescriptor const * fragmentStage;
     DawnVertexInputDescriptor const * vertexInput;
     DawnPrimitiveTopology primitiveTopology;
     DawnRasterizationStateDescriptor const * rasterizationState;
@@ -653,6 +654,10 @@ typedef struct DawnRenderPipelineDescriptor {
     bool alphaToCoverageEnabled;
 } DawnRenderPipelineDescriptor;
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // Custom types depending on the target language
 typedef void (*DawnErrorCallback)(DawnErrorType type, const char* message, void* userdata);
@@ -669,9 +674,7 @@ typedef void (*DawnBufferMapWriteCallback)(DawnBufferMapAsyncStatus status,
                                            void* userdata);
 typedef void (*DawnFenceOnCompletionCallback)(DawnFenceCompletionStatus status, void* userdata);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#if !defined(DAWN_SKIP_PROCS)
 
 // Procs of BindGroup
 typedef void (*DawnProcBindGroupReference)(DawnBindGroup bindGroup);
@@ -682,11 +685,11 @@ typedef void (*DawnProcBindGroupLayoutReference)(DawnBindGroupLayout bindGroupLa
 typedef void (*DawnProcBindGroupLayoutRelease)(DawnBindGroupLayout bindGroupLayout);
 
 // Procs of Buffer
-typedef void (*DawnProcBufferSetSubData)(DawnBuffer buffer, uint64_t start, uint64_t count, void const * data);
-typedef void (*DawnProcBufferUnmap)(DawnBuffer buffer);
 typedef void (*DawnProcBufferDestroy)(DawnBuffer buffer);
 typedef void (*DawnProcBufferMapReadAsync)(DawnBuffer buffer, DawnBufferMapReadCallback callback, void * userdata);
 typedef void (*DawnProcBufferMapWriteAsync)(DawnBuffer buffer, DawnBufferMapWriteCallback callback, void * userdata);
+typedef void (*DawnProcBufferSetSubData)(DawnBuffer buffer, uint64_t start, uint64_t count, void const * data);
+typedef void (*DawnProcBufferUnmap)(DawnBuffer buffer);
 typedef void (*DawnProcBufferReference)(DawnBuffer buffer);
 typedef void (*DawnProcBufferRelease)(DawnBuffer buffer);
 
@@ -695,13 +698,13 @@ typedef void (*DawnProcCommandBufferReference)(DawnCommandBuffer commandBuffer);
 typedef void (*DawnProcCommandBufferRelease)(DawnCommandBuffer commandBuffer);
 
 // Procs of CommandEncoder
-typedef DawnCommandBuffer (*DawnProcCommandEncoderFinish)(DawnCommandEncoder commandEncoder, DawnCommandBufferDescriptor const * descriptor);
 typedef DawnComputePassEncoder (*DawnProcCommandEncoderBeginComputePass)(DawnCommandEncoder commandEncoder, DawnComputePassDescriptor const * descriptor);
 typedef DawnRenderPassEncoder (*DawnProcCommandEncoderBeginRenderPass)(DawnCommandEncoder commandEncoder, DawnRenderPassDescriptor const * descriptor);
 typedef void (*DawnProcCommandEncoderCopyBufferToBuffer)(DawnCommandEncoder commandEncoder, DawnBuffer source, uint64_t sourceOffset, DawnBuffer destination, uint64_t destinationOffset, uint64_t size);
 typedef void (*DawnProcCommandEncoderCopyBufferToTexture)(DawnCommandEncoder commandEncoder, DawnBufferCopyView const * source, DawnTextureCopyView const * destination, DawnExtent3D const * copySize);
 typedef void (*DawnProcCommandEncoderCopyTextureToBuffer)(DawnCommandEncoder commandEncoder, DawnTextureCopyView const * source, DawnBufferCopyView const * destination, DawnExtent3D const * copySize);
 typedef void (*DawnProcCommandEncoderCopyTextureToTexture)(DawnCommandEncoder commandEncoder, DawnTextureCopyView const * source, DawnTextureCopyView const * destination, DawnExtent3D const * copySize);
+typedef DawnCommandBuffer (*DawnProcCommandEncoderFinish)(DawnCommandEncoder commandEncoder, DawnCommandBufferDescriptor const * descriptor);
 typedef void (*DawnProcCommandEncoderInsertDebugMarker)(DawnCommandEncoder commandEncoder, char const * groupLabel);
 typedef void (*DawnProcCommandEncoderPopDebugGroup)(DawnCommandEncoder commandEncoder);
 typedef void (*DawnProcCommandEncoderPushDebugGroup)(DawnCommandEncoder commandEncoder, char const * groupLabel);
@@ -709,14 +712,14 @@ typedef void (*DawnProcCommandEncoderReference)(DawnCommandEncoder commandEncode
 typedef void (*DawnProcCommandEncoderRelease)(DawnCommandEncoder commandEncoder);
 
 // Procs of ComputePassEncoder
-typedef void (*DawnProcComputePassEncoderInsertDebugMarker)(DawnComputePassEncoder computePassEncoder, char const * groupLabel);
-typedef void (*DawnProcComputePassEncoderPopDebugGroup)(DawnComputePassEncoder computePassEncoder);
-typedef void (*DawnProcComputePassEncoderPushDebugGroup)(DawnComputePassEncoder computePassEncoder, char const * groupLabel);
-typedef void (*DawnProcComputePassEncoderSetPipeline)(DawnComputePassEncoder computePassEncoder, DawnComputePipeline pipeline);
-typedef void (*DawnProcComputePassEncoderSetBindGroup)(DawnComputePassEncoder computePassEncoder, uint32_t groupIndex, DawnBindGroup group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets);
 typedef void (*DawnProcComputePassEncoderDispatch)(DawnComputePassEncoder computePassEncoder, uint32_t x, uint32_t y, uint32_t z);
 typedef void (*DawnProcComputePassEncoderDispatchIndirect)(DawnComputePassEncoder computePassEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
 typedef void (*DawnProcComputePassEncoderEndPass)(DawnComputePassEncoder computePassEncoder);
+typedef void (*DawnProcComputePassEncoderInsertDebugMarker)(DawnComputePassEncoder computePassEncoder, char const * groupLabel);
+typedef void (*DawnProcComputePassEncoderPopDebugGroup)(DawnComputePassEncoder computePassEncoder);
+typedef void (*DawnProcComputePassEncoderPushDebugGroup)(DawnComputePassEncoder computePassEncoder, char const * groupLabel);
+typedef void (*DawnProcComputePassEncoderSetBindGroup)(DawnComputePassEncoder computePassEncoder, uint32_t groupIndex, DawnBindGroup group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets);
+typedef void (*DawnProcComputePassEncoderSetPipeline)(DawnComputePassEncoder computePassEncoder, DawnComputePipeline pipeline);
 typedef void (*DawnProcComputePassEncoderReference)(DawnComputePassEncoder computePassEncoder);
 typedef void (*DawnProcComputePassEncoderRelease)(DawnComputePassEncoder computePassEncoder);
 
@@ -729,22 +732,22 @@ typedef DawnBindGroup (*DawnProcDeviceCreateBindGroup)(DawnDevice device, DawnBi
 typedef DawnBindGroupLayout (*DawnProcDeviceCreateBindGroupLayout)(DawnDevice device, DawnBindGroupLayoutDescriptor const * descriptor);
 typedef DawnBuffer (*DawnProcDeviceCreateBuffer)(DawnDevice device, DawnBufferDescriptor const * descriptor);
 typedef DawnCreateBufferMappedResult (*DawnProcDeviceCreateBufferMapped)(DawnDevice device, DawnBufferDescriptor const * descriptor);
+typedef void (*DawnProcDeviceCreateBufferMappedAsync)(DawnDevice device, DawnBufferDescriptor const * descriptor, DawnBufferCreateMappedCallback callback, void * userdata);
 typedef DawnCommandEncoder (*DawnProcDeviceCreateCommandEncoder)(DawnDevice device, DawnCommandEncoderDescriptor const * descriptor);
 typedef DawnComputePipeline (*DawnProcDeviceCreateComputePipeline)(DawnDevice device, DawnComputePipelineDescriptor const * descriptor);
-typedef DawnRenderPipeline (*DawnProcDeviceCreateRenderPipeline)(DawnDevice device, DawnRenderPipelineDescriptor const * descriptor);
 typedef DawnPipelineLayout (*DawnProcDeviceCreatePipelineLayout)(DawnDevice device, DawnPipelineLayoutDescriptor const * descriptor);
 typedef DawnQueue (*DawnProcDeviceCreateQueue)(DawnDevice device);
 typedef DawnRenderBundleEncoder (*DawnProcDeviceCreateRenderBundleEncoder)(DawnDevice device, DawnRenderBundleEncoderDescriptor const * descriptor);
+typedef DawnRenderPipeline (*DawnProcDeviceCreateRenderPipeline)(DawnDevice device, DawnRenderPipelineDescriptor const * descriptor);
 typedef DawnSampler (*DawnProcDeviceCreateSampler)(DawnDevice device, DawnSamplerDescriptor const * descriptor);
 typedef DawnShaderModule (*DawnProcDeviceCreateShaderModule)(DawnDevice device, DawnShaderModuleDescriptor const * descriptor);
 typedef DawnSwapChain (*DawnProcDeviceCreateSwapChain)(DawnDevice device, DawnSwapChainDescriptor const * descriptor);
 typedef DawnTexture (*DawnProcDeviceCreateTexture)(DawnDevice device, DawnTextureDescriptor const * descriptor);
 typedef void (*DawnProcDeviceInjectError)(DawnDevice device, DawnErrorType type, char const * message);
-typedef void (*DawnProcDeviceTick)(DawnDevice device);
-typedef void (*DawnProcDevicePushErrorScope)(DawnDevice device, DawnErrorFilter filter);
-typedef void (*DawnProcDeviceCreateBufferMappedAsync)(DawnDevice device, DawnBufferDescriptor const * descriptor, DawnBufferCreateMappedCallback callback, void * userdata);
-typedef void (*DawnProcDeviceSetUncapturedErrorCallback)(DawnDevice device, DawnErrorCallback callback, void * userdata);
 typedef bool (*DawnProcDevicePopErrorScope)(DawnDevice device, DawnErrorCallback callback, void * userdata);
+typedef void (*DawnProcDevicePushErrorScope)(DawnDevice device, DawnErrorFilter filter);
+typedef void (*DawnProcDeviceSetUncapturedErrorCallback)(DawnDevice device, DawnErrorCallback callback, void * userdata);
+typedef void (*DawnProcDeviceTick)(DawnDevice device);
 typedef void (*DawnProcDeviceReference)(DawnDevice device);
 typedef void (*DawnProcDeviceRelease)(DawnDevice device);
 
@@ -759,9 +762,9 @@ typedef void (*DawnProcPipelineLayoutReference)(DawnPipelineLayout pipelineLayou
 typedef void (*DawnProcPipelineLayoutRelease)(DawnPipelineLayout pipelineLayout);
 
 // Procs of Queue
-typedef void (*DawnProcQueueSubmit)(DawnQueue queue, uint32_t commandCount, DawnCommandBuffer const * commands);
-typedef void (*DawnProcQueueSignal)(DawnQueue queue, DawnFence fence, uint64_t signalValue);
 typedef DawnFence (*DawnProcQueueCreateFence)(DawnQueue queue, DawnFenceDescriptor const * descriptor);
+typedef void (*DawnProcQueueSignal)(DawnQueue queue, DawnFence fence, uint64_t signalValue);
+typedef void (*DawnProcQueueSubmit)(DawnQueue queue, uint32_t commandCount, DawnCommandBuffer const * commands);
 typedef void (*DawnProcQueueReference)(DawnQueue queue);
 typedef void (*DawnProcQueueRelease)(DawnQueue queue);
 
@@ -770,39 +773,39 @@ typedef void (*DawnProcRenderBundleReference)(DawnRenderBundle renderBundle);
 typedef void (*DawnProcRenderBundleRelease)(DawnRenderBundle renderBundle);
 
 // Procs of RenderBundleEncoder
-typedef void (*DawnProcRenderBundleEncoderSetPipeline)(DawnRenderBundleEncoder renderBundleEncoder, DawnRenderPipeline pipeline);
-typedef void (*DawnProcRenderBundleEncoderSetBindGroup)(DawnRenderBundleEncoder renderBundleEncoder, uint32_t groupIndex, DawnBindGroup group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets);
 typedef void (*DawnProcRenderBundleEncoderDraw)(DawnRenderBundleEncoder renderBundleEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 typedef void (*DawnProcRenderBundleEncoderDrawIndexed)(DawnRenderBundleEncoder renderBundleEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance);
-typedef void (*DawnProcRenderBundleEncoderDrawIndirect)(DawnRenderBundleEncoder renderBundleEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
 typedef void (*DawnProcRenderBundleEncoderDrawIndexedIndirect)(DawnRenderBundleEncoder renderBundleEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
+typedef void (*DawnProcRenderBundleEncoderDrawIndirect)(DawnRenderBundleEncoder renderBundleEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
+typedef DawnRenderBundle (*DawnProcRenderBundleEncoderFinish)(DawnRenderBundleEncoder renderBundleEncoder, DawnRenderBundleDescriptor const * descriptor);
 typedef void (*DawnProcRenderBundleEncoderInsertDebugMarker)(DawnRenderBundleEncoder renderBundleEncoder, char const * groupLabel);
 typedef void (*DawnProcRenderBundleEncoderPopDebugGroup)(DawnRenderBundleEncoder renderBundleEncoder);
 typedef void (*DawnProcRenderBundleEncoderPushDebugGroup)(DawnRenderBundleEncoder renderBundleEncoder, char const * groupLabel);
-typedef void (*DawnProcRenderBundleEncoderSetVertexBuffers)(DawnRenderBundleEncoder renderBundleEncoder, uint32_t startSlot, uint32_t count, DawnBuffer const * buffers, uint64_t const * offsets);
+typedef void (*DawnProcRenderBundleEncoderSetBindGroup)(DawnRenderBundleEncoder renderBundleEncoder, uint32_t groupIndex, DawnBindGroup group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets);
 typedef void (*DawnProcRenderBundleEncoderSetIndexBuffer)(DawnRenderBundleEncoder renderBundleEncoder, DawnBuffer buffer, uint64_t offset);
-typedef DawnRenderBundle (*DawnProcRenderBundleEncoderFinish)(DawnRenderBundleEncoder renderBundleEncoder, DawnRenderBundleDescriptor const * descriptor);
+typedef void (*DawnProcRenderBundleEncoderSetPipeline)(DawnRenderBundleEncoder renderBundleEncoder, DawnRenderPipeline pipeline);
+typedef void (*DawnProcRenderBundleEncoderSetVertexBuffer)(DawnRenderBundleEncoder renderBundleEncoder, uint32_t slot, DawnBuffer buffer, uint64_t offset);
 typedef void (*DawnProcRenderBundleEncoderReference)(DawnRenderBundleEncoder renderBundleEncoder);
 typedef void (*DawnProcRenderBundleEncoderRelease)(DawnRenderBundleEncoder renderBundleEncoder);
 
 // Procs of RenderPassEncoder
-typedef void (*DawnProcRenderPassEncoderSetPipeline)(DawnRenderPassEncoder renderPassEncoder, DawnRenderPipeline pipeline);
-typedef void (*DawnProcRenderPassEncoderSetBindGroup)(DawnRenderPassEncoder renderPassEncoder, uint32_t groupIndex, DawnBindGroup group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets);
 typedef void (*DawnProcRenderPassEncoderDraw)(DawnRenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 typedef void (*DawnProcRenderPassEncoderDrawIndexed)(DawnRenderPassEncoder renderPassEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance);
-typedef void (*DawnProcRenderPassEncoderDrawIndirect)(DawnRenderPassEncoder renderPassEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
 typedef void (*DawnProcRenderPassEncoderDrawIndexedIndirect)(DawnRenderPassEncoder renderPassEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
+typedef void (*DawnProcRenderPassEncoderDrawIndirect)(DawnRenderPassEncoder renderPassEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
+typedef void (*DawnProcRenderPassEncoderEndPass)(DawnRenderPassEncoder renderPassEncoder);
 typedef void (*DawnProcRenderPassEncoderExecuteBundles)(DawnRenderPassEncoder renderPassEncoder, uint32_t bundlesCount, DawnRenderBundle const * bundles);
 typedef void (*DawnProcRenderPassEncoderInsertDebugMarker)(DawnRenderPassEncoder renderPassEncoder, char const * groupLabel);
 typedef void (*DawnProcRenderPassEncoderPopDebugGroup)(DawnRenderPassEncoder renderPassEncoder);
 typedef void (*DawnProcRenderPassEncoderPushDebugGroup)(DawnRenderPassEncoder renderPassEncoder, char const * groupLabel);
-typedef void (*DawnProcRenderPassEncoderSetStencilReference)(DawnRenderPassEncoder renderPassEncoder, uint32_t reference);
+typedef void (*DawnProcRenderPassEncoderSetBindGroup)(DawnRenderPassEncoder renderPassEncoder, uint32_t groupIndex, DawnBindGroup group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets);
 typedef void (*DawnProcRenderPassEncoderSetBlendColor)(DawnRenderPassEncoder renderPassEncoder, DawnColor const * color);
-typedef void (*DawnProcRenderPassEncoderSetViewport)(DawnRenderPassEncoder renderPassEncoder, float x, float y, float width, float height, float minDepth, float maxDepth);
-typedef void (*DawnProcRenderPassEncoderSetScissorRect)(DawnRenderPassEncoder renderPassEncoder, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
-typedef void (*DawnProcRenderPassEncoderSetVertexBuffers)(DawnRenderPassEncoder renderPassEncoder, uint32_t startSlot, uint32_t count, DawnBuffer const * buffers, uint64_t const * offsets);
 typedef void (*DawnProcRenderPassEncoderSetIndexBuffer)(DawnRenderPassEncoder renderPassEncoder, DawnBuffer buffer, uint64_t offset);
-typedef void (*DawnProcRenderPassEncoderEndPass)(DawnRenderPassEncoder renderPassEncoder);
+typedef void (*DawnProcRenderPassEncoderSetPipeline)(DawnRenderPassEncoder renderPassEncoder, DawnRenderPipeline pipeline);
+typedef void (*DawnProcRenderPassEncoderSetScissorRect)(DawnRenderPassEncoder renderPassEncoder, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+typedef void (*DawnProcRenderPassEncoderSetStencilReference)(DawnRenderPassEncoder renderPassEncoder, uint32_t reference);
+typedef void (*DawnProcRenderPassEncoderSetVertexBuffer)(DawnRenderPassEncoder renderPassEncoder, uint32_t slot, DawnBuffer buffer, uint64_t offset);
+typedef void (*DawnProcRenderPassEncoderSetViewport)(DawnRenderPassEncoder renderPassEncoder, float x, float y, float width, float height, float minDepth, float maxDepth);
 typedef void (*DawnProcRenderPassEncoderReference)(DawnRenderPassEncoder renderPassEncoder);
 typedef void (*DawnProcRenderPassEncoderRelease)(DawnRenderPassEncoder renderPassEncoder);
 
@@ -835,6 +838,7 @@ typedef void (*DawnProcTextureRelease)(DawnTexture texture);
 typedef void (*DawnProcTextureViewReference)(DawnTextureView textureView);
 typedef void (*DawnProcTextureViewRelease)(DawnTextureView textureView);
 
+#endif  // !defined(DAWN_SKIP_PROCS)
 
 struct DawnProcTable_s {
     DawnProcBindGroupReference bindGroupReference;
@@ -843,38 +847,38 @@ struct DawnProcTable_s {
     DawnProcBindGroupLayoutReference bindGroupLayoutReference;
     DawnProcBindGroupLayoutRelease bindGroupLayoutRelease;
 
-    DawnProcBufferSetSubData bufferSetSubData;
-    DawnProcBufferUnmap bufferUnmap;
     DawnProcBufferDestroy bufferDestroy;
     DawnProcBufferMapReadAsync bufferMapReadAsync;
     DawnProcBufferMapWriteAsync bufferMapWriteAsync;
+    DawnProcBufferSetSubData bufferSetSubData;
+    DawnProcBufferUnmap bufferUnmap;
     DawnProcBufferReference bufferReference;
     DawnProcBufferRelease bufferRelease;
 
     DawnProcCommandBufferReference commandBufferReference;
     DawnProcCommandBufferRelease commandBufferRelease;
 
-    DawnProcCommandEncoderFinish commandEncoderFinish;
     DawnProcCommandEncoderBeginComputePass commandEncoderBeginComputePass;
     DawnProcCommandEncoderBeginRenderPass commandEncoderBeginRenderPass;
     DawnProcCommandEncoderCopyBufferToBuffer commandEncoderCopyBufferToBuffer;
     DawnProcCommandEncoderCopyBufferToTexture commandEncoderCopyBufferToTexture;
     DawnProcCommandEncoderCopyTextureToBuffer commandEncoderCopyTextureToBuffer;
     DawnProcCommandEncoderCopyTextureToTexture commandEncoderCopyTextureToTexture;
+    DawnProcCommandEncoderFinish commandEncoderFinish;
     DawnProcCommandEncoderInsertDebugMarker commandEncoderInsertDebugMarker;
     DawnProcCommandEncoderPopDebugGroup commandEncoderPopDebugGroup;
     DawnProcCommandEncoderPushDebugGroup commandEncoderPushDebugGroup;
     DawnProcCommandEncoderReference commandEncoderReference;
     DawnProcCommandEncoderRelease commandEncoderRelease;
 
-    DawnProcComputePassEncoderInsertDebugMarker computePassEncoderInsertDebugMarker;
-    DawnProcComputePassEncoderPopDebugGroup computePassEncoderPopDebugGroup;
-    DawnProcComputePassEncoderPushDebugGroup computePassEncoderPushDebugGroup;
-    DawnProcComputePassEncoderSetPipeline computePassEncoderSetPipeline;
-    DawnProcComputePassEncoderSetBindGroup computePassEncoderSetBindGroup;
     DawnProcComputePassEncoderDispatch computePassEncoderDispatch;
     DawnProcComputePassEncoderDispatchIndirect computePassEncoderDispatchIndirect;
     DawnProcComputePassEncoderEndPass computePassEncoderEndPass;
+    DawnProcComputePassEncoderInsertDebugMarker computePassEncoderInsertDebugMarker;
+    DawnProcComputePassEncoderPopDebugGroup computePassEncoderPopDebugGroup;
+    DawnProcComputePassEncoderPushDebugGroup computePassEncoderPushDebugGroup;
+    DawnProcComputePassEncoderSetBindGroup computePassEncoderSetBindGroup;
+    DawnProcComputePassEncoderSetPipeline computePassEncoderSetPipeline;
     DawnProcComputePassEncoderReference computePassEncoderReference;
     DawnProcComputePassEncoderRelease computePassEncoderRelease;
 
@@ -885,22 +889,22 @@ struct DawnProcTable_s {
     DawnProcDeviceCreateBindGroupLayout deviceCreateBindGroupLayout;
     DawnProcDeviceCreateBuffer deviceCreateBuffer;
     DawnProcDeviceCreateBufferMapped deviceCreateBufferMapped;
+    DawnProcDeviceCreateBufferMappedAsync deviceCreateBufferMappedAsync;
     DawnProcDeviceCreateCommandEncoder deviceCreateCommandEncoder;
     DawnProcDeviceCreateComputePipeline deviceCreateComputePipeline;
-    DawnProcDeviceCreateRenderPipeline deviceCreateRenderPipeline;
     DawnProcDeviceCreatePipelineLayout deviceCreatePipelineLayout;
     DawnProcDeviceCreateQueue deviceCreateQueue;
     DawnProcDeviceCreateRenderBundleEncoder deviceCreateRenderBundleEncoder;
+    DawnProcDeviceCreateRenderPipeline deviceCreateRenderPipeline;
     DawnProcDeviceCreateSampler deviceCreateSampler;
     DawnProcDeviceCreateShaderModule deviceCreateShaderModule;
     DawnProcDeviceCreateSwapChain deviceCreateSwapChain;
     DawnProcDeviceCreateTexture deviceCreateTexture;
     DawnProcDeviceInjectError deviceInjectError;
-    DawnProcDeviceTick deviceTick;
-    DawnProcDevicePushErrorScope devicePushErrorScope;
-    DawnProcDeviceCreateBufferMappedAsync deviceCreateBufferMappedAsync;
-    DawnProcDeviceSetUncapturedErrorCallback deviceSetUncapturedErrorCallback;
     DawnProcDevicePopErrorScope devicePopErrorScope;
+    DawnProcDevicePushErrorScope devicePushErrorScope;
+    DawnProcDeviceSetUncapturedErrorCallback deviceSetUncapturedErrorCallback;
+    DawnProcDeviceTick deviceTick;
     DawnProcDeviceReference deviceReference;
     DawnProcDeviceRelease deviceRelease;
 
@@ -912,47 +916,47 @@ struct DawnProcTable_s {
     DawnProcPipelineLayoutReference pipelineLayoutReference;
     DawnProcPipelineLayoutRelease pipelineLayoutRelease;
 
-    DawnProcQueueSubmit queueSubmit;
-    DawnProcQueueSignal queueSignal;
     DawnProcQueueCreateFence queueCreateFence;
+    DawnProcQueueSignal queueSignal;
+    DawnProcQueueSubmit queueSubmit;
     DawnProcQueueReference queueReference;
     DawnProcQueueRelease queueRelease;
 
     DawnProcRenderBundleReference renderBundleReference;
     DawnProcRenderBundleRelease renderBundleRelease;
 
-    DawnProcRenderBundleEncoderSetPipeline renderBundleEncoderSetPipeline;
-    DawnProcRenderBundleEncoderSetBindGroup renderBundleEncoderSetBindGroup;
     DawnProcRenderBundleEncoderDraw renderBundleEncoderDraw;
     DawnProcRenderBundleEncoderDrawIndexed renderBundleEncoderDrawIndexed;
-    DawnProcRenderBundleEncoderDrawIndirect renderBundleEncoderDrawIndirect;
     DawnProcRenderBundleEncoderDrawIndexedIndirect renderBundleEncoderDrawIndexedIndirect;
+    DawnProcRenderBundleEncoderDrawIndirect renderBundleEncoderDrawIndirect;
+    DawnProcRenderBundleEncoderFinish renderBundleEncoderFinish;
     DawnProcRenderBundleEncoderInsertDebugMarker renderBundleEncoderInsertDebugMarker;
     DawnProcRenderBundleEncoderPopDebugGroup renderBundleEncoderPopDebugGroup;
     DawnProcRenderBundleEncoderPushDebugGroup renderBundleEncoderPushDebugGroup;
-    DawnProcRenderBundleEncoderSetVertexBuffers renderBundleEncoderSetVertexBuffers;
+    DawnProcRenderBundleEncoderSetBindGroup renderBundleEncoderSetBindGroup;
     DawnProcRenderBundleEncoderSetIndexBuffer renderBundleEncoderSetIndexBuffer;
-    DawnProcRenderBundleEncoderFinish renderBundleEncoderFinish;
+    DawnProcRenderBundleEncoderSetPipeline renderBundleEncoderSetPipeline;
+    DawnProcRenderBundleEncoderSetVertexBuffer renderBundleEncoderSetVertexBuffer;
     DawnProcRenderBundleEncoderReference renderBundleEncoderReference;
     DawnProcRenderBundleEncoderRelease renderBundleEncoderRelease;
 
-    DawnProcRenderPassEncoderSetPipeline renderPassEncoderSetPipeline;
-    DawnProcRenderPassEncoderSetBindGroup renderPassEncoderSetBindGroup;
     DawnProcRenderPassEncoderDraw renderPassEncoderDraw;
     DawnProcRenderPassEncoderDrawIndexed renderPassEncoderDrawIndexed;
-    DawnProcRenderPassEncoderDrawIndirect renderPassEncoderDrawIndirect;
     DawnProcRenderPassEncoderDrawIndexedIndirect renderPassEncoderDrawIndexedIndirect;
+    DawnProcRenderPassEncoderDrawIndirect renderPassEncoderDrawIndirect;
+    DawnProcRenderPassEncoderEndPass renderPassEncoderEndPass;
     DawnProcRenderPassEncoderExecuteBundles renderPassEncoderExecuteBundles;
     DawnProcRenderPassEncoderInsertDebugMarker renderPassEncoderInsertDebugMarker;
     DawnProcRenderPassEncoderPopDebugGroup renderPassEncoderPopDebugGroup;
     DawnProcRenderPassEncoderPushDebugGroup renderPassEncoderPushDebugGroup;
-    DawnProcRenderPassEncoderSetStencilReference renderPassEncoderSetStencilReference;
+    DawnProcRenderPassEncoderSetBindGroup renderPassEncoderSetBindGroup;
     DawnProcRenderPassEncoderSetBlendColor renderPassEncoderSetBlendColor;
-    DawnProcRenderPassEncoderSetViewport renderPassEncoderSetViewport;
-    DawnProcRenderPassEncoderSetScissorRect renderPassEncoderSetScissorRect;
-    DawnProcRenderPassEncoderSetVertexBuffers renderPassEncoderSetVertexBuffers;
     DawnProcRenderPassEncoderSetIndexBuffer renderPassEncoderSetIndexBuffer;
-    DawnProcRenderPassEncoderEndPass renderPassEncoderEndPass;
+    DawnProcRenderPassEncoderSetPipeline renderPassEncoderSetPipeline;
+    DawnProcRenderPassEncoderSetScissorRect renderPassEncoderSetScissorRect;
+    DawnProcRenderPassEncoderSetStencilReference renderPassEncoderSetStencilReference;
+    DawnProcRenderPassEncoderSetVertexBuffer renderPassEncoderSetVertexBuffer;
+    DawnProcRenderPassEncoderSetViewport renderPassEncoderSetViewport;
     DawnProcRenderPassEncoderReference renderPassEncoderReference;
     DawnProcRenderPassEncoderRelease renderPassEncoderRelease;
 
@@ -984,6 +988,8 @@ typedef struct DawnProcTable_s DawnProcTable;
 
 // Stuff below is for convenience and will forward calls to a static DawnProcTable.
 
+#if !defined(DAWN_SKIP_DECLARATIONS)
+
 // Set which DawnProcTable will be used
 DAWN_EXPORT void dawnSetProcs(const DawnProcTable* procs);
 
@@ -996,11 +1002,11 @@ DAWN_EXPORT void dawnBindGroupLayoutReference(DawnBindGroupLayout bindGroupLayou
 DAWN_EXPORT void dawnBindGroupLayoutRelease(DawnBindGroupLayout bindGroupLayout);
 
 // Methods of Buffer
-DAWN_EXPORT void dawnBufferSetSubData(DawnBuffer buffer, uint64_t start, uint64_t count, void const * data);
-DAWN_EXPORT void dawnBufferUnmap(DawnBuffer buffer);
 DAWN_EXPORT void dawnBufferDestroy(DawnBuffer buffer);
 DAWN_EXPORT void dawnBufferMapReadAsync(DawnBuffer buffer, DawnBufferMapReadCallback callback, void * userdata);
 DAWN_EXPORT void dawnBufferMapWriteAsync(DawnBuffer buffer, DawnBufferMapWriteCallback callback, void * userdata);
+DAWN_EXPORT void dawnBufferSetSubData(DawnBuffer buffer, uint64_t start, uint64_t count, void const * data);
+DAWN_EXPORT void dawnBufferUnmap(DawnBuffer buffer);
 DAWN_EXPORT void dawnBufferReference(DawnBuffer buffer);
 DAWN_EXPORT void dawnBufferRelease(DawnBuffer buffer);
 
@@ -1009,13 +1015,13 @@ DAWN_EXPORT void dawnCommandBufferReference(DawnCommandBuffer commandBuffer);
 DAWN_EXPORT void dawnCommandBufferRelease(DawnCommandBuffer commandBuffer);
 
 // Methods of CommandEncoder
-DAWN_EXPORT DawnCommandBuffer dawnCommandEncoderFinish(DawnCommandEncoder commandEncoder, DawnCommandBufferDescriptor const * descriptor);
 DAWN_EXPORT DawnComputePassEncoder dawnCommandEncoderBeginComputePass(DawnCommandEncoder commandEncoder, DawnComputePassDescriptor const * descriptor);
 DAWN_EXPORT DawnRenderPassEncoder dawnCommandEncoderBeginRenderPass(DawnCommandEncoder commandEncoder, DawnRenderPassDescriptor const * descriptor);
 DAWN_EXPORT void dawnCommandEncoderCopyBufferToBuffer(DawnCommandEncoder commandEncoder, DawnBuffer source, uint64_t sourceOffset, DawnBuffer destination, uint64_t destinationOffset, uint64_t size);
 DAWN_EXPORT void dawnCommandEncoderCopyBufferToTexture(DawnCommandEncoder commandEncoder, DawnBufferCopyView const * source, DawnTextureCopyView const * destination, DawnExtent3D const * copySize);
 DAWN_EXPORT void dawnCommandEncoderCopyTextureToBuffer(DawnCommandEncoder commandEncoder, DawnTextureCopyView const * source, DawnBufferCopyView const * destination, DawnExtent3D const * copySize);
 DAWN_EXPORT void dawnCommandEncoderCopyTextureToTexture(DawnCommandEncoder commandEncoder, DawnTextureCopyView const * source, DawnTextureCopyView const * destination, DawnExtent3D const * copySize);
+DAWN_EXPORT DawnCommandBuffer dawnCommandEncoderFinish(DawnCommandEncoder commandEncoder, DawnCommandBufferDescriptor const * descriptor);
 DAWN_EXPORT void dawnCommandEncoderInsertDebugMarker(DawnCommandEncoder commandEncoder, char const * groupLabel);
 DAWN_EXPORT void dawnCommandEncoderPopDebugGroup(DawnCommandEncoder commandEncoder);
 DAWN_EXPORT void dawnCommandEncoderPushDebugGroup(DawnCommandEncoder commandEncoder, char const * groupLabel);
@@ -1023,14 +1029,14 @@ DAWN_EXPORT void dawnCommandEncoderReference(DawnCommandEncoder commandEncoder);
 DAWN_EXPORT void dawnCommandEncoderRelease(DawnCommandEncoder commandEncoder);
 
 // Methods of ComputePassEncoder
-DAWN_EXPORT void dawnComputePassEncoderInsertDebugMarker(DawnComputePassEncoder computePassEncoder, char const * groupLabel);
-DAWN_EXPORT void dawnComputePassEncoderPopDebugGroup(DawnComputePassEncoder computePassEncoder);
-DAWN_EXPORT void dawnComputePassEncoderPushDebugGroup(DawnComputePassEncoder computePassEncoder, char const * groupLabel);
-DAWN_EXPORT void dawnComputePassEncoderSetPipeline(DawnComputePassEncoder computePassEncoder, DawnComputePipeline pipeline);
-DAWN_EXPORT void dawnComputePassEncoderSetBindGroup(DawnComputePassEncoder computePassEncoder, uint32_t groupIndex, DawnBindGroup group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets);
 DAWN_EXPORT void dawnComputePassEncoderDispatch(DawnComputePassEncoder computePassEncoder, uint32_t x, uint32_t y, uint32_t z);
 DAWN_EXPORT void dawnComputePassEncoderDispatchIndirect(DawnComputePassEncoder computePassEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
 DAWN_EXPORT void dawnComputePassEncoderEndPass(DawnComputePassEncoder computePassEncoder);
+DAWN_EXPORT void dawnComputePassEncoderInsertDebugMarker(DawnComputePassEncoder computePassEncoder, char const * groupLabel);
+DAWN_EXPORT void dawnComputePassEncoderPopDebugGroup(DawnComputePassEncoder computePassEncoder);
+DAWN_EXPORT void dawnComputePassEncoderPushDebugGroup(DawnComputePassEncoder computePassEncoder, char const * groupLabel);
+DAWN_EXPORT void dawnComputePassEncoderSetBindGroup(DawnComputePassEncoder computePassEncoder, uint32_t groupIndex, DawnBindGroup group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets);
+DAWN_EXPORT void dawnComputePassEncoderSetPipeline(DawnComputePassEncoder computePassEncoder, DawnComputePipeline pipeline);
 DAWN_EXPORT void dawnComputePassEncoderReference(DawnComputePassEncoder computePassEncoder);
 DAWN_EXPORT void dawnComputePassEncoderRelease(DawnComputePassEncoder computePassEncoder);
 
@@ -1043,22 +1049,22 @@ DAWN_EXPORT DawnBindGroup dawnDeviceCreateBindGroup(DawnDevice device, DawnBindG
 DAWN_EXPORT DawnBindGroupLayout dawnDeviceCreateBindGroupLayout(DawnDevice device, DawnBindGroupLayoutDescriptor const * descriptor);
 DAWN_EXPORT DawnBuffer dawnDeviceCreateBuffer(DawnDevice device, DawnBufferDescriptor const * descriptor);
 DAWN_EXPORT DawnCreateBufferMappedResult dawnDeviceCreateBufferMapped(DawnDevice device, DawnBufferDescriptor const * descriptor);
+DAWN_EXPORT void dawnDeviceCreateBufferMappedAsync(DawnDevice device, DawnBufferDescriptor const * descriptor, DawnBufferCreateMappedCallback callback, void * userdata);
 DAWN_EXPORT DawnCommandEncoder dawnDeviceCreateCommandEncoder(DawnDevice device, DawnCommandEncoderDescriptor const * descriptor);
 DAWN_EXPORT DawnComputePipeline dawnDeviceCreateComputePipeline(DawnDevice device, DawnComputePipelineDescriptor const * descriptor);
-DAWN_EXPORT DawnRenderPipeline dawnDeviceCreateRenderPipeline(DawnDevice device, DawnRenderPipelineDescriptor const * descriptor);
 DAWN_EXPORT DawnPipelineLayout dawnDeviceCreatePipelineLayout(DawnDevice device, DawnPipelineLayoutDescriptor const * descriptor);
 DAWN_EXPORT DawnQueue dawnDeviceCreateQueue(DawnDevice device);
 DAWN_EXPORT DawnRenderBundleEncoder dawnDeviceCreateRenderBundleEncoder(DawnDevice device, DawnRenderBundleEncoderDescriptor const * descriptor);
+DAWN_EXPORT DawnRenderPipeline dawnDeviceCreateRenderPipeline(DawnDevice device, DawnRenderPipelineDescriptor const * descriptor);
 DAWN_EXPORT DawnSampler dawnDeviceCreateSampler(DawnDevice device, DawnSamplerDescriptor const * descriptor);
 DAWN_EXPORT DawnShaderModule dawnDeviceCreateShaderModule(DawnDevice device, DawnShaderModuleDescriptor const * descriptor);
 DAWN_EXPORT DawnSwapChain dawnDeviceCreateSwapChain(DawnDevice device, DawnSwapChainDescriptor const * descriptor);
 DAWN_EXPORT DawnTexture dawnDeviceCreateTexture(DawnDevice device, DawnTextureDescriptor const * descriptor);
 DAWN_EXPORT void dawnDeviceInjectError(DawnDevice device, DawnErrorType type, char const * message);
-DAWN_EXPORT void dawnDeviceTick(DawnDevice device);
-DAWN_EXPORT void dawnDevicePushErrorScope(DawnDevice device, DawnErrorFilter filter);
-DAWN_EXPORT void dawnDeviceCreateBufferMappedAsync(DawnDevice device, DawnBufferDescriptor const * descriptor, DawnBufferCreateMappedCallback callback, void * userdata);
-DAWN_EXPORT void dawnDeviceSetUncapturedErrorCallback(DawnDevice device, DawnErrorCallback callback, void * userdata);
 DAWN_EXPORT bool dawnDevicePopErrorScope(DawnDevice device, DawnErrorCallback callback, void * userdata);
+DAWN_EXPORT void dawnDevicePushErrorScope(DawnDevice device, DawnErrorFilter filter);
+DAWN_EXPORT void dawnDeviceSetUncapturedErrorCallback(DawnDevice device, DawnErrorCallback callback, void * userdata);
+DAWN_EXPORT void dawnDeviceTick(DawnDevice device);
 DAWN_EXPORT void dawnDeviceReference(DawnDevice device);
 DAWN_EXPORT void dawnDeviceRelease(DawnDevice device);
 
@@ -1073,9 +1079,9 @@ DAWN_EXPORT void dawnPipelineLayoutReference(DawnPipelineLayout pipelineLayout);
 DAWN_EXPORT void dawnPipelineLayoutRelease(DawnPipelineLayout pipelineLayout);
 
 // Methods of Queue
-DAWN_EXPORT void dawnQueueSubmit(DawnQueue queue, uint32_t commandCount, DawnCommandBuffer const * commands);
-DAWN_EXPORT void dawnQueueSignal(DawnQueue queue, DawnFence fence, uint64_t signalValue);
 DAWN_EXPORT DawnFence dawnQueueCreateFence(DawnQueue queue, DawnFenceDescriptor const * descriptor);
+DAWN_EXPORT void dawnQueueSignal(DawnQueue queue, DawnFence fence, uint64_t signalValue);
+DAWN_EXPORT void dawnQueueSubmit(DawnQueue queue, uint32_t commandCount, DawnCommandBuffer const * commands);
 DAWN_EXPORT void dawnQueueReference(DawnQueue queue);
 DAWN_EXPORT void dawnQueueRelease(DawnQueue queue);
 
@@ -1084,39 +1090,39 @@ DAWN_EXPORT void dawnRenderBundleReference(DawnRenderBundle renderBundle);
 DAWN_EXPORT void dawnRenderBundleRelease(DawnRenderBundle renderBundle);
 
 // Methods of RenderBundleEncoder
-DAWN_EXPORT void dawnRenderBundleEncoderSetPipeline(DawnRenderBundleEncoder renderBundleEncoder, DawnRenderPipeline pipeline);
-DAWN_EXPORT void dawnRenderBundleEncoderSetBindGroup(DawnRenderBundleEncoder renderBundleEncoder, uint32_t groupIndex, DawnBindGroup group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets);
 DAWN_EXPORT void dawnRenderBundleEncoderDraw(DawnRenderBundleEncoder renderBundleEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 DAWN_EXPORT void dawnRenderBundleEncoderDrawIndexed(DawnRenderBundleEncoder renderBundleEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance);
-DAWN_EXPORT void dawnRenderBundleEncoderDrawIndirect(DawnRenderBundleEncoder renderBundleEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
 DAWN_EXPORT void dawnRenderBundleEncoderDrawIndexedIndirect(DawnRenderBundleEncoder renderBundleEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
+DAWN_EXPORT void dawnRenderBundleEncoderDrawIndirect(DawnRenderBundleEncoder renderBundleEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
+DAWN_EXPORT DawnRenderBundle dawnRenderBundleEncoderFinish(DawnRenderBundleEncoder renderBundleEncoder, DawnRenderBundleDescriptor const * descriptor);
 DAWN_EXPORT void dawnRenderBundleEncoderInsertDebugMarker(DawnRenderBundleEncoder renderBundleEncoder, char const * groupLabel);
 DAWN_EXPORT void dawnRenderBundleEncoderPopDebugGroup(DawnRenderBundleEncoder renderBundleEncoder);
 DAWN_EXPORT void dawnRenderBundleEncoderPushDebugGroup(DawnRenderBundleEncoder renderBundleEncoder, char const * groupLabel);
-DAWN_EXPORT void dawnRenderBundleEncoderSetVertexBuffers(DawnRenderBundleEncoder renderBundleEncoder, uint32_t startSlot, uint32_t count, DawnBuffer const * buffers, uint64_t const * offsets);
+DAWN_EXPORT void dawnRenderBundleEncoderSetBindGroup(DawnRenderBundleEncoder renderBundleEncoder, uint32_t groupIndex, DawnBindGroup group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets);
 DAWN_EXPORT void dawnRenderBundleEncoderSetIndexBuffer(DawnRenderBundleEncoder renderBundleEncoder, DawnBuffer buffer, uint64_t offset);
-DAWN_EXPORT DawnRenderBundle dawnRenderBundleEncoderFinish(DawnRenderBundleEncoder renderBundleEncoder, DawnRenderBundleDescriptor const * descriptor);
+DAWN_EXPORT void dawnRenderBundleEncoderSetPipeline(DawnRenderBundleEncoder renderBundleEncoder, DawnRenderPipeline pipeline);
+DAWN_EXPORT void dawnRenderBundleEncoderSetVertexBuffer(DawnRenderBundleEncoder renderBundleEncoder, uint32_t slot, DawnBuffer buffer, uint64_t offset);
 DAWN_EXPORT void dawnRenderBundleEncoderReference(DawnRenderBundleEncoder renderBundleEncoder);
 DAWN_EXPORT void dawnRenderBundleEncoderRelease(DawnRenderBundleEncoder renderBundleEncoder);
 
 // Methods of RenderPassEncoder
-DAWN_EXPORT void dawnRenderPassEncoderSetPipeline(DawnRenderPassEncoder renderPassEncoder, DawnRenderPipeline pipeline);
-DAWN_EXPORT void dawnRenderPassEncoderSetBindGroup(DawnRenderPassEncoder renderPassEncoder, uint32_t groupIndex, DawnBindGroup group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets);
 DAWN_EXPORT void dawnRenderPassEncoderDraw(DawnRenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 DAWN_EXPORT void dawnRenderPassEncoderDrawIndexed(DawnRenderPassEncoder renderPassEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance);
-DAWN_EXPORT void dawnRenderPassEncoderDrawIndirect(DawnRenderPassEncoder renderPassEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
 DAWN_EXPORT void dawnRenderPassEncoderDrawIndexedIndirect(DawnRenderPassEncoder renderPassEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
+DAWN_EXPORT void dawnRenderPassEncoderDrawIndirect(DawnRenderPassEncoder renderPassEncoder, DawnBuffer indirectBuffer, uint64_t indirectOffset);
+DAWN_EXPORT void dawnRenderPassEncoderEndPass(DawnRenderPassEncoder renderPassEncoder);
 DAWN_EXPORT void dawnRenderPassEncoderExecuteBundles(DawnRenderPassEncoder renderPassEncoder, uint32_t bundlesCount, DawnRenderBundle const * bundles);
 DAWN_EXPORT void dawnRenderPassEncoderInsertDebugMarker(DawnRenderPassEncoder renderPassEncoder, char const * groupLabel);
 DAWN_EXPORT void dawnRenderPassEncoderPopDebugGroup(DawnRenderPassEncoder renderPassEncoder);
 DAWN_EXPORT void dawnRenderPassEncoderPushDebugGroup(DawnRenderPassEncoder renderPassEncoder, char const * groupLabel);
-DAWN_EXPORT void dawnRenderPassEncoderSetStencilReference(DawnRenderPassEncoder renderPassEncoder, uint32_t reference);
+DAWN_EXPORT void dawnRenderPassEncoderSetBindGroup(DawnRenderPassEncoder renderPassEncoder, uint32_t groupIndex, DawnBindGroup group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets);
 DAWN_EXPORT void dawnRenderPassEncoderSetBlendColor(DawnRenderPassEncoder renderPassEncoder, DawnColor const * color);
-DAWN_EXPORT void dawnRenderPassEncoderSetViewport(DawnRenderPassEncoder renderPassEncoder, float x, float y, float width, float height, float minDepth, float maxDepth);
-DAWN_EXPORT void dawnRenderPassEncoderSetScissorRect(DawnRenderPassEncoder renderPassEncoder, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
-DAWN_EXPORT void dawnRenderPassEncoderSetVertexBuffers(DawnRenderPassEncoder renderPassEncoder, uint32_t startSlot, uint32_t count, DawnBuffer const * buffers, uint64_t const * offsets);
 DAWN_EXPORT void dawnRenderPassEncoderSetIndexBuffer(DawnRenderPassEncoder renderPassEncoder, DawnBuffer buffer, uint64_t offset);
-DAWN_EXPORT void dawnRenderPassEncoderEndPass(DawnRenderPassEncoder renderPassEncoder);
+DAWN_EXPORT void dawnRenderPassEncoderSetPipeline(DawnRenderPassEncoder renderPassEncoder, DawnRenderPipeline pipeline);
+DAWN_EXPORT void dawnRenderPassEncoderSetScissorRect(DawnRenderPassEncoder renderPassEncoder, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+DAWN_EXPORT void dawnRenderPassEncoderSetStencilReference(DawnRenderPassEncoder renderPassEncoder, uint32_t reference);
+DAWN_EXPORT void dawnRenderPassEncoderSetVertexBuffer(DawnRenderPassEncoder renderPassEncoder, uint32_t slot, DawnBuffer buffer, uint64_t offset);
+DAWN_EXPORT void dawnRenderPassEncoderSetViewport(DawnRenderPassEncoder renderPassEncoder, float x, float y, float width, float height, float minDepth, float maxDepth);
 DAWN_EXPORT void dawnRenderPassEncoderReference(DawnRenderPassEncoder renderPassEncoder);
 DAWN_EXPORT void dawnRenderPassEncoderRelease(DawnRenderPassEncoder renderPassEncoder);
 
@@ -1149,6 +1155,7 @@ DAWN_EXPORT void dawnTextureRelease(DawnTexture texture);
 DAWN_EXPORT void dawnTextureViewReference(DawnTextureView textureView);
 DAWN_EXPORT void dawnTextureViewRelease(DawnTextureView textureView);
 
+#endif  // !defined(DAWN_SKIP_DECLARATIONS)
 
 #ifdef __cplusplus
 } // extern "C"
