@@ -1698,7 +1698,7 @@
                 "bindGroupLayoutCount",
                 "bindGroupLayouts"
             ],
-            "DawnPipelineStageDescriptor": [
+            "DawnProgrammableStageDescriptor": [
                 "nextInChain",
                 "module",
                 "entryPoint"

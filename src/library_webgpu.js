@@ -109,6 +109,9 @@ var LibraryWebGPU = {
       {{{ gpu.makeInitManager('PipelineLayout') }}}
       {{{ gpu.makeInitManager('RenderPipeline') }}}
       {{{ gpu.makeInitManager('ShaderModule') }}}
+
+      {{{ gpu.makeInitManager('RenderBundleEncoder') }}}
+      {{{ gpu.makeInitManager('RenderBundle') }}}
     },
 
     trackMapWrite: function(obj, mapped) {
@@ -194,7 +197,7 @@ var LibraryWebGPU = {
     LoadOp: [ 'clear', 'load' ],
     PrimitiveTopology: [ 'point-list', 'line-list', 'line-strip', 'triangle-list', 'triangle-strip' ],
     StencilOperation: [ 'keep', 'zero', 'replace', 'invert', 'increment-clamp', 'decrement-clamp', 'increment-wrap', 'decrement-wrap' ],
-    StoreOp: [ 'store' ],
+    StoreOp: [ 'store', 'clear' ],
     TextureAspect: [ 'all', 'stencil-only', 'depth-only' ],
     TextureComponentType: [ 'float', 'sint', 'uint' ],
     TextureDimension: [ '1d', '2d', '3d' ],
@@ -239,6 +242,9 @@ var LibraryWebGPU = {
   {{{ gpu.makeReferenceRelease('PipelineLayout') }}}
   {{{ gpu.makeReferenceRelease('RenderPipeline') }}}
   {{{ gpu.makeReferenceRelease('ShaderModule') }}}
+
+  {{{ gpu.makeReferenceRelease('RenderBundleEncoder') }}}
+  {{{ gpu.makeReferenceRelease('RenderBundle') }}}
 
   // *Destroy
 
@@ -480,9 +486,9 @@ var LibraryWebGPU = {
       {{{ gpu.makeCheckDescriptor('ptr') }}}
       return {
         module: WebGPU.mgrShaderModule.get(
-          {{{ makeGetValue('ptr', C_STRUCTS.DawnPipelineStageDescriptor.module, '*') }}}),
+          {{{ makeGetValue('ptr', C_STRUCTS.DawnProgrammableStageDescriptor.module, '*') }}}),
         entryPoint: UTF8ToString(
-          {{{ makeGetValue('ptr', C_STRUCTS.DawnPipelineStageDescriptor.entryPoint, '*') }}}),
+          {{{ makeGetValue('ptr', C_STRUCTS.DawnProgrammableStageDescriptor.entryPoint, '*') }}}),
       };
     }
 
@@ -724,6 +730,33 @@ var LibraryWebGPU = {
     return WebGPU.mgrCommandBuffer.create(commandEncoder.finish());
   },
 
+  dawnDeviceCreateRenderBundleEncoder: function(deviceId, descriptor) {
+    {{{ gpu.makeCheck('descriptor !== 0') }}}
+
+    function makeRenderBundleEncoderDescriptor(descriptor) {
+
+      function makeColorFormats(count, formatsPtr) {
+        var formats = [];
+        for (var i = 0; i < count; ++i, formatsPtr += 4) {
+          formats.push(WebGPU.TextureFormat[{{{ gpu.makeGetU32('formatsPtr', 0) }}}]);
+        }
+        return formats;
+      }
+
+      return {
+        colorFormats: makeColorFormats(
+          {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnRenderBundleEncoderDescriptor.colorFormatsCount) }}},
+          {{{ makeGetValue('descriptor', C_STRUCTS.DawnRenderBundleEncoderDescriptor.colorFormats, '*') }}}),
+        depthStencilFormat: WebGPU.TextureFormat[{{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnRenderBundleEncoderDescriptor.depthStencilFormat) }}}],
+        sampleCount: {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnRenderBundleEncoderDescriptor.sampleCount) }}},
+      };
+    }
+
+    var desc = makeRenderBundleEncoderDescriptor(descriptor);
+    var device = WebGPU.mgrDevice.get(deviceId);
+    return WebGPU.mgrRenderBundleEncoder.create(device.createRenderBundleEncoder(desc));
+  },
+
   dawnCommandEncoderBeginRenderPass: function(encoderId, descriptor) {
     {{{ gpu.makeCheck('descriptor !== 0') }}}
 
@@ -860,6 +893,7 @@ var LibraryWebGPU = {
     buffer.mapWriteAsync().then(function(mapped) {
       WebGPU.trackMapWrite(bufferObj, mapped);
 
+      var data = bufferObj.mapWriteSrc;
       var dataLength_h = (mapped.byteLength / 0x100000000) | 0;
       var dataLength_l = mapped.byteLength | 0;
       // DawnBufferMapAsyncStatus status, void* data, uint64_t dataLength, void* userdata
@@ -910,6 +944,7 @@ var LibraryWebGPU = {
       pass.setBindGroup(groupIndex, group);
     } else {
       var offsets = [];
+      // TODO: Update to u32 after rolling the header.
       for (var i = 0; i < dynamicOffsetCount; i++, dynamicOffsetsPtr += 8) {
         offsets.push({{{ gpu.makeGetU64('dynamicOffsetsPtr', 0) }}});
       }
@@ -930,25 +965,17 @@ var LibraryWebGPU = {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass.setScissorRect(x, y, w, h);
   },
+  dawnRenderPassEncoderSetViewport: function(passId, x, y, w, h, minDepth, maxDepth) {
+    var pass = WebGPU.mgrRenderPassEncoder.get(passId);
+    pass.setViewport(x, y, w, h, minDepth, maxDepth);
+  },
   dawnRenderPassEncoderSetStencilReference: function(passId, reference) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass.setStencilReference(reference);
   },
-  dawnRenderPassEncoderSetVertexBuffers: function(passId, startSlot, count, buffersPtr, offsetsPtr) {
+  dawnRenderPassEncoderSetVertexBuffer: function(passId, slot, bufferId, offset) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
-
-#if ASSERTIONS
-    assert(buffersPtr % 4 === 0);
-#endif
-    var buffers = Array.from(HEAP32.subarray(buffersPtr >> 2, (buffersPtr >> 2) + count),
-      function(id) { return WebGPU.mgrBuffer.get(id); });
-
-    var offsets = [];
-    for (var i = 0; i < count; i++, offsetsPtr += 8) {
-        offsets.push({{{ gpu.makeGetU64('offsetsPtr', 0) }}});
-    }
-
-    pass.setVertexBuffers(startSlot, buffers, offsets);
+    pass.setVertexBuffer(slot, WebGPU.mgrBuffer.get(bufferId), offset);
   },
   dawnRenderPassEncoderDraw: function(passId, vertexCount, instanceCount, firstVertex, firstInstance) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
@@ -958,9 +985,63 @@ var LibraryWebGPU = {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass.drawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
   },
+  dawnRenderPassEncoderExecuteBundles: function(passId, count, bundlesPtr) {
+    var pass = WebGPU.mgrRenderPassEncoder.get(passId);
+
+#if ASSERTIONS
+    assert(bundlesPtr % 4 === 0);
+#endif
+
+    var bundles = Array.from(HEAP32.subarray(bundlesPtr >> 2, (bundlesPtr >> 2) + count),
+      function(id) { return WebGPU.mgrRenderBundle.get(id); });
+    pass.executeBundles(bundles);
+  },
   dawnRenderPassEncoderEndPass: function(passId) {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass.endPass();
+  },
+
+  // Render bundle encoder
+
+  dawnRenderBundleEncoderSetBindGroup: function(bundleId, groupIndex, groupId, dynamicOffsetCount, dynamicOffsetsPtr) {
+    var pass = WebGPU.mgrRenderBundleEncoder.get(bundleId);
+    var group = WebGPU.mgrBindGroup.get(groupId);
+    if (dynamicOffsetCount == 0) {
+      pass.setBindGroup(groupIndex, group);
+    } else {
+      var offsets = [];
+      // TODO: Update to u32 after rolling the header.
+      for (var i = 0; i < dynamicOffsetCount; i++, dynamicOffsetsPtr += 8) {
+        offsets.push({{{ gpu.makeGetU64('dynamicOffsetsPtr', 0) }}});
+      }
+      pass.setBindGroup(groupIndex, group, offsets);
+    }
+  },
+  dawnRenderBundleEncoderSetIndexBuffer: function(bundleId, bufferId, offset) {
+    var pass = WebGPU.mgrRenderBundleEncoder.get(bundleId);
+    var buffer = WebGPU.mgrBuffer.get(bufferId);
+    pass.setIndexBuffer(buffer, offset);
+  },
+  dawnRenderBundleEncoderSetPipeline: function(bundleId, pipelineId) {
+    var pass = WebGPU.mgrRenderBundleEncoder.get(bundleId);
+    var pipeline = WebGPU.mgrRenderPipeline.get(pipelineId);
+    pass.setPipeline(pipeline);
+  },
+  dawnRenderBundleEncoderSetVertexBuffer: function(bundleId, slot, bufferId, offset) {
+    var pass = WebGPU.mgrRenderBundleEncoder.get(bundleId);
+    pass.setVertexBuffer(slot, WebGPU.mgrBuffer.get(bufferId), offset);
+  },
+  dawnRenderBundleEncoderDraw: function(bundleId, vertexCount, instanceCount, firstVertex, firstInstance) {
+    var pass = WebGPU.mgrRenderBundleEncoder.get(bundleId);
+    pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+  },
+  dawnRenderBundleEncoderDrawIndexed: function(bundleId, indexCount, instanceCount, firstIndex, baseVertex, firstInstance) {
+    var pass = WebGPU.mgrRenderBundleEncoder.get(bundleId);
+    pass.drawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
+  },
+  dawnRenderBundleEncoderFinish: function(bundleId) {
+    var encoder = WebGPU.mgrRenderBundleEncoder.get(bundleId);
+    return WebGPU.mgrRenderBundle.create(encoder.finish());
   },
 
   // Unsupported (won't be implemented)

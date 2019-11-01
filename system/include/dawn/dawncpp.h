@@ -376,7 +376,7 @@ namespace dawn {
     struct FenceDescriptor;
     struct Origin3D;
     struct PipelineLayoutDescriptor;
-    struct PipelineStageDescriptor;
+    struct ProgrammableStageDescriptor;
     struct RasterizationStateDescriptor;
     struct RenderBundleDescriptor;
     struct RenderBundleEncoderDescriptor;
@@ -499,11 +499,11 @@ namespace dawn {
         using ObjectBase::ObjectBase;
         using ObjectBase::operator=;
 
-        DAWN_EXPORT void SetSubData(uint64_t start, uint64_t count, void const * data) const;
-        DAWN_EXPORT void Unmap() const;
         DAWN_EXPORT void Destroy() const;
         DAWN_EXPORT void MapReadAsync(BufferMapReadCallback callback, void * userdata) const;
         DAWN_EXPORT void MapWriteAsync(BufferMapWriteCallback callback, void * userdata) const;
+        DAWN_EXPORT void SetSubData(uint64_t start, uint64_t count, void const * data) const;
+        DAWN_EXPORT void Unmap() const;
 
       private:
         friend ObjectBase<Buffer, DawnBuffer>;
@@ -528,13 +528,13 @@ namespace dawn {
         using ObjectBase::ObjectBase;
         using ObjectBase::operator=;
 
-        DAWN_EXPORT CommandBuffer Finish(CommandBufferDescriptor const * descriptor = nullptr) const;
         DAWN_EXPORT ComputePassEncoder BeginComputePass(ComputePassDescriptor const * descriptor = nullptr) const;
         DAWN_EXPORT RenderPassEncoder BeginRenderPass(RenderPassDescriptor const * descriptor) const;
         DAWN_EXPORT void CopyBufferToBuffer(Buffer const& source, uint64_t sourceOffset, Buffer const& destination, uint64_t destinationOffset, uint64_t size) const;
         DAWN_EXPORT void CopyBufferToTexture(BufferCopyView const * source, TextureCopyView const * destination, Extent3D const * copySize) const;
         DAWN_EXPORT void CopyTextureToBuffer(TextureCopyView const * source, BufferCopyView const * destination, Extent3D const * copySize) const;
         DAWN_EXPORT void CopyTextureToTexture(TextureCopyView const * source, TextureCopyView const * destination, Extent3D const * copySize) const;
+        DAWN_EXPORT CommandBuffer Finish(CommandBufferDescriptor const * descriptor = nullptr) const;
         DAWN_EXPORT void InsertDebugMarker(char const * groupLabel) const;
         DAWN_EXPORT void PopDebugGroup() const;
         DAWN_EXPORT void PushDebugGroup(char const * groupLabel) const;
@@ -550,14 +550,14 @@ namespace dawn {
         using ObjectBase::ObjectBase;
         using ObjectBase::operator=;
 
-        DAWN_EXPORT void InsertDebugMarker(char const * groupLabel) const;
-        DAWN_EXPORT void PopDebugGroup() const;
-        DAWN_EXPORT void PushDebugGroup(char const * groupLabel) const;
-        DAWN_EXPORT void SetPipeline(ComputePipeline const& pipeline) const;
-        DAWN_EXPORT void SetBindGroup(uint32_t groupIndex, BindGroup const& group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets) const;
         DAWN_EXPORT void Dispatch(uint32_t x, uint32_t y = 1, uint32_t z = 1) const;
         DAWN_EXPORT void DispatchIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const;
         DAWN_EXPORT void EndPass() const;
+        DAWN_EXPORT void InsertDebugMarker(char const * groupLabel) const;
+        DAWN_EXPORT void PopDebugGroup() const;
+        DAWN_EXPORT void PushDebugGroup(char const * groupLabel) const;
+        DAWN_EXPORT void SetBindGroup(uint32_t groupIndex, BindGroup const& group, uint32_t dynamicOffsetCount = 0, uint64_t const * dynamicOffsets = nullptr) const;
+        DAWN_EXPORT void SetPipeline(ComputePipeline const& pipeline) const;
 
       private:
         friend ObjectBase<ComputePassEncoder, DawnComputePassEncoder>;
@@ -586,22 +586,22 @@ namespace dawn {
         DAWN_EXPORT BindGroupLayout CreateBindGroupLayout(BindGroupLayoutDescriptor const * descriptor) const;
         DAWN_EXPORT Buffer CreateBuffer(BufferDescriptor const * descriptor) const;
         DAWN_EXPORT CreateBufferMappedResult CreateBufferMapped(BufferDescriptor const * descriptor) const;
+        DAWN_EXPORT void CreateBufferMappedAsync(BufferDescriptor const * descriptor, BufferCreateMappedCallback callback, void * userdata) const;
         DAWN_EXPORT CommandEncoder CreateCommandEncoder(CommandEncoderDescriptor const * descriptor = nullptr) const;
         DAWN_EXPORT ComputePipeline CreateComputePipeline(ComputePipelineDescriptor const * descriptor) const;
-        DAWN_EXPORT RenderPipeline CreateRenderPipeline(RenderPipelineDescriptor const * descriptor) const;
         DAWN_EXPORT PipelineLayout CreatePipelineLayout(PipelineLayoutDescriptor const * descriptor) const;
         DAWN_EXPORT Queue CreateQueue() const;
         DAWN_EXPORT RenderBundleEncoder CreateRenderBundleEncoder(RenderBundleEncoderDescriptor const * descriptor) const;
+        DAWN_EXPORT RenderPipeline CreateRenderPipeline(RenderPipelineDescriptor const * descriptor) const;
         DAWN_EXPORT Sampler CreateSampler(SamplerDescriptor const * descriptor) const;
         DAWN_EXPORT ShaderModule CreateShaderModule(ShaderModuleDescriptor const * descriptor) const;
         DAWN_EXPORT SwapChain CreateSwapChain(SwapChainDescriptor const * descriptor) const;
         DAWN_EXPORT Texture CreateTexture(TextureDescriptor const * descriptor) const;
         DAWN_EXPORT void InjectError(ErrorType type, char const * message) const;
-        DAWN_EXPORT void Tick() const;
-        DAWN_EXPORT void PushErrorScope(ErrorFilter filter) const;
-        DAWN_EXPORT void CreateBufferMappedAsync(BufferDescriptor const * descriptor, BufferCreateMappedCallback callback, void * userdata) const;
-        DAWN_EXPORT void SetUncapturedErrorCallback(ErrorCallback callback, void * userdata) const;
         DAWN_EXPORT bool PopErrorScope(ErrorCallback callback, void * userdata) const;
+        DAWN_EXPORT void PushErrorScope(ErrorFilter filter) const;
+        DAWN_EXPORT void SetUncapturedErrorCallback(ErrorCallback callback, void * userdata) const;
+        DAWN_EXPORT void Tick() const;
 
       private:
         friend ObjectBase<Device, DawnDevice>;
@@ -640,9 +640,9 @@ namespace dawn {
         using ObjectBase::ObjectBase;
         using ObjectBase::operator=;
 
-        DAWN_EXPORT void Submit(uint32_t commandCount, CommandBuffer const * commands) const;
-        DAWN_EXPORT void Signal(Fence const& fence, uint64_t signalValue) const;
         DAWN_EXPORT Fence CreateFence(FenceDescriptor const * descriptor) const;
+        DAWN_EXPORT void Signal(Fence const& fence, uint64_t signalValue) const;
+        DAWN_EXPORT void Submit(uint32_t commandCount, CommandBuffer const * commands) const;
 
       private:
         friend ObjectBase<Queue, DawnQueue>;
@@ -667,18 +667,18 @@ namespace dawn {
         using ObjectBase::ObjectBase;
         using ObjectBase::operator=;
 
-        DAWN_EXPORT void SetPipeline(RenderPipeline const& pipeline) const;
-        DAWN_EXPORT void SetBindGroup(uint32_t groupIndex, BindGroup const& group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets) const;
         DAWN_EXPORT void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) const;
         DAWN_EXPORT void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance) const;
-        DAWN_EXPORT void DrawIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const;
         DAWN_EXPORT void DrawIndexedIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const;
+        DAWN_EXPORT void DrawIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const;
+        DAWN_EXPORT RenderBundle Finish(RenderBundleDescriptor const * descriptor = nullptr) const;
         DAWN_EXPORT void InsertDebugMarker(char const * groupLabel) const;
         DAWN_EXPORT void PopDebugGroup() const;
         DAWN_EXPORT void PushDebugGroup(char const * groupLabel) const;
-        DAWN_EXPORT void SetVertexBuffers(uint32_t startSlot, uint32_t count, Buffer const * buffers, uint64_t const * offsets) const;
+        DAWN_EXPORT void SetBindGroup(uint32_t groupIndex, BindGroup const& group, uint32_t dynamicOffsetCount = 0, uint64_t const * dynamicOffsets = nullptr) const;
         DAWN_EXPORT void SetIndexBuffer(Buffer const& buffer, uint64_t offset) const;
-        DAWN_EXPORT RenderBundle Finish(RenderBundleDescriptor const * descriptor = nullptr) const;
+        DAWN_EXPORT void SetPipeline(RenderPipeline const& pipeline) const;
+        DAWN_EXPORT void SetVertexBuffer(uint32_t slot, Buffer const& buffer, uint64_t offset = 0) const;
 
       private:
         friend ObjectBase<RenderBundleEncoder, DawnRenderBundleEncoder>;
@@ -691,23 +691,23 @@ namespace dawn {
         using ObjectBase::ObjectBase;
         using ObjectBase::operator=;
 
-        DAWN_EXPORT void SetPipeline(RenderPipeline const& pipeline) const;
-        DAWN_EXPORT void SetBindGroup(uint32_t groupIndex, BindGroup const& group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets) const;
         DAWN_EXPORT void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) const;
         DAWN_EXPORT void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance) const;
-        DAWN_EXPORT void DrawIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const;
         DAWN_EXPORT void DrawIndexedIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const;
+        DAWN_EXPORT void DrawIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const;
+        DAWN_EXPORT void EndPass() const;
         DAWN_EXPORT void ExecuteBundles(uint32_t bundlesCount, RenderBundle const * bundles) const;
         DAWN_EXPORT void InsertDebugMarker(char const * groupLabel) const;
         DAWN_EXPORT void PopDebugGroup() const;
         DAWN_EXPORT void PushDebugGroup(char const * groupLabel) const;
-        DAWN_EXPORT void SetStencilReference(uint32_t reference) const;
+        DAWN_EXPORT void SetBindGroup(uint32_t groupIndex, BindGroup const& group, uint32_t dynamicOffsetCount = 0, uint64_t const * dynamicOffsets = nullptr) const;
         DAWN_EXPORT void SetBlendColor(Color const * color) const;
-        DAWN_EXPORT void SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth) const;
-        DAWN_EXPORT void SetScissorRect(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const;
-        DAWN_EXPORT void SetVertexBuffers(uint32_t startSlot, uint32_t count, Buffer const * buffers, uint64_t const * offsets) const;
         DAWN_EXPORT void SetIndexBuffer(Buffer const& buffer, uint64_t offset) const;
-        DAWN_EXPORT void EndPass() const;
+        DAWN_EXPORT void SetPipeline(RenderPipeline const& pipeline) const;
+        DAWN_EXPORT void SetScissorRect(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const;
+        DAWN_EXPORT void SetStencilReference(uint32_t reference) const;
+        DAWN_EXPORT void SetVertexBuffer(uint32_t slot, Buffer const& buffer, uint64_t offset = 0) const;
+        DAWN_EXPORT void SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth) const;
 
       private:
         friend ObjectBase<RenderPassEncoder, DawnRenderPassEncoder>;
@@ -886,7 +886,7 @@ namespace dawn {
         BindGroupLayout const * bindGroupLayouts;
     };
 
-    struct PipelineStageDescriptor {
+    struct ProgrammableStageDescriptor {
         const void* nextInChain = nullptr;
         ShaderModule module;
         char const * entryPoint;
@@ -1004,7 +1004,7 @@ namespace dawn {
         const void* nextInChain = nullptr;
         char const * label = nullptr;
         PipelineLayout layout;
-        PipelineStageDescriptor computeStage;
+        ProgrammableStageDescriptor computeStage;
     };
 
     struct DepthStencilStateDescriptor {
@@ -1054,6 +1054,7 @@ namespace dawn {
     };
 
     struct RenderPassDescriptor {
+        const void* nextInChain = nullptr;
         char const * label = nullptr;
         uint32_t colorAttachmentCount;
         RenderPassColorAttachmentDescriptor const * colorAttachments;
@@ -1071,8 +1072,8 @@ namespace dawn {
         const void* nextInChain = nullptr;
         char const * label = nullptr;
         PipelineLayout layout;
-        PipelineStageDescriptor vertexStage;
-        PipelineStageDescriptor const * fragmentStage = nullptr;
+        ProgrammableStageDescriptor vertexStage;
+        ProgrammableStageDescriptor const * fragmentStage = nullptr;
         VertexInputDescriptor const * vertexInput = nullptr;
         PrimitiveTopology primitiveTopology;
         RasterizationStateDescriptor const * rasterizationState = nullptr;

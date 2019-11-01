@@ -363,7 +363,6 @@ namespace dawn {
 
 
 
-
     static_assert(sizeof(BindGroupBinding) == sizeof(DawnBindGroupBinding), "sizeof mismatch for BindGroupBinding");
     static_assert(alignof(BindGroupBinding) == alignof(DawnBindGroupBinding), "alignof mismatch for BindGroupBinding");
 
@@ -536,15 +535,15 @@ namespace dawn {
             "offsetof mismatch for PipelineLayoutDescriptor::bindGroupLayouts");
 
 
-    static_assert(sizeof(PipelineStageDescriptor) == sizeof(DawnPipelineStageDescriptor), "sizeof mismatch for PipelineStageDescriptor");
-    static_assert(alignof(PipelineStageDescriptor) == alignof(DawnPipelineStageDescriptor), "alignof mismatch for PipelineStageDescriptor");
+    static_assert(sizeof(ProgrammableStageDescriptor) == sizeof(DawnProgrammableStageDescriptor), "sizeof mismatch for ProgrammableStageDescriptor");
+    static_assert(alignof(ProgrammableStageDescriptor) == alignof(DawnProgrammableStageDescriptor), "alignof mismatch for ProgrammableStageDescriptor");
 
-    static_assert(offsetof(PipelineStageDescriptor, nextInChain) == offsetof(DawnPipelineStageDescriptor, nextInChain),
-            "offsetof mismatch for PipelineStageDescriptor::nextInChain");
-    static_assert(offsetof(PipelineStageDescriptor, module) == offsetof(DawnPipelineStageDescriptor, module),
-            "offsetof mismatch for PipelineStageDescriptor::module");
-    static_assert(offsetof(PipelineStageDescriptor, entryPoint) == offsetof(DawnPipelineStageDescriptor, entryPoint),
-            "offsetof mismatch for PipelineStageDescriptor::entryPoint");
+    static_assert(offsetof(ProgrammableStageDescriptor, nextInChain) == offsetof(DawnProgrammableStageDescriptor, nextInChain),
+            "offsetof mismatch for ProgrammableStageDescriptor::nextInChain");
+    static_assert(offsetof(ProgrammableStageDescriptor, module) == offsetof(DawnProgrammableStageDescriptor, module),
+            "offsetof mismatch for ProgrammableStageDescriptor::module");
+    static_assert(offsetof(ProgrammableStageDescriptor, entryPoint) == offsetof(DawnProgrammableStageDescriptor, entryPoint),
+            "offsetof mismatch for ProgrammableStageDescriptor::entryPoint");
 
 
     static_assert(sizeof(RasterizationStateDescriptor) == sizeof(DawnRasterizationStateDescriptor), "sizeof mismatch for RasterizationStateDescriptor");
@@ -853,6 +852,8 @@ namespace dawn {
     static_assert(sizeof(RenderPassDescriptor) == sizeof(DawnRenderPassDescriptor), "sizeof mismatch for RenderPassDescriptor");
     static_assert(alignof(RenderPassDescriptor) == alignof(DawnRenderPassDescriptor), "alignof mismatch for RenderPassDescriptor");
 
+    static_assert(offsetof(RenderPassDescriptor, nextInChain) == offsetof(DawnRenderPassDescriptor, nextInChain),
+            "offsetof mismatch for RenderPassDescriptor::nextInChain");
     static_assert(offsetof(RenderPassDescriptor, label) == offsetof(DawnRenderPassDescriptor, label),
             "offsetof mismatch for RenderPassDescriptor::label");
     static_assert(offsetof(RenderPassDescriptor, colorAttachmentCount) == offsetof(DawnRenderPassDescriptor, colorAttachmentCount),
@@ -949,12 +950,6 @@ namespace dawn {
 
 
 
-        void Buffer::SetSubData(uint64_t start, uint64_t count, void const * data) const {
-        dawnBufferSetSubData(Get(), start, count, reinterpret_cast<void const * >(data));
-    }
-        void Buffer::Unmap() const {
-        dawnBufferUnmap(Get());
-    }
         void Buffer::Destroy() const {
         dawnBufferDestroy(Get());
     }
@@ -963,6 +958,12 @@ namespace dawn {
     }
         void Buffer::MapWriteAsync(BufferMapWriteCallback callback, void * userdata) const {
         dawnBufferMapWriteAsync(Get(), callback, reinterpret_cast<void * >(userdata));
+    }
+        void Buffer::SetSubData(uint64_t start, uint64_t count, void const * data) const {
+        dawnBufferSetSubData(Get(), start, count, reinterpret_cast<void const * >(data));
+    }
+        void Buffer::Unmap() const {
+        dawnBufferUnmap(Get());
     }
     void Buffer::DawnReference(DawnBuffer handle) {
         if (handle != nullptr) {
@@ -998,10 +999,6 @@ namespace dawn {
 
 
 
-        CommandBuffer CommandEncoder::Finish(CommandBufferDescriptor const * descriptor) const {
-        auto result = dawnCommandEncoderFinish(Get(), reinterpret_cast<DawnCommandBufferDescriptor const * >(descriptor));
-        return CommandBuffer::Acquire(result);
-    }
         ComputePassEncoder CommandEncoder::BeginComputePass(ComputePassDescriptor const * descriptor) const {
         auto result = dawnCommandEncoderBeginComputePass(Get(), reinterpret_cast<DawnComputePassDescriptor const * >(descriptor));
         return ComputePassEncoder::Acquire(result);
@@ -1021,6 +1018,10 @@ namespace dawn {
     }
         void CommandEncoder::CopyTextureToTexture(TextureCopyView const * source, TextureCopyView const * destination, Extent3D const * copySize) const {
         dawnCommandEncoderCopyTextureToTexture(Get(), reinterpret_cast<DawnTextureCopyView const * >(source), reinterpret_cast<DawnTextureCopyView const * >(destination), reinterpret_cast<DawnExtent3D const * >(copySize));
+    }
+        CommandBuffer CommandEncoder::Finish(CommandBufferDescriptor const * descriptor) const {
+        auto result = dawnCommandEncoderFinish(Get(), reinterpret_cast<DawnCommandBufferDescriptor const * >(descriptor));
+        return CommandBuffer::Acquire(result);
     }
         void CommandEncoder::InsertDebugMarker(char const * groupLabel) const {
         dawnCommandEncoderInsertDebugMarker(Get(), reinterpret_cast<char const * >(groupLabel));
@@ -1048,6 +1049,15 @@ namespace dawn {
 
 
 
+        void ComputePassEncoder::Dispatch(uint32_t x, uint32_t y, uint32_t z) const {
+        dawnComputePassEncoderDispatch(Get(), x, y, z);
+    }
+        void ComputePassEncoder::DispatchIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const {
+        dawnComputePassEncoderDispatchIndirect(Get(), indirectBuffer.Get(), indirectOffset);
+    }
+        void ComputePassEncoder::EndPass() const {
+        dawnComputePassEncoderEndPass(Get());
+    }
         void ComputePassEncoder::InsertDebugMarker(char const * groupLabel) const {
         dawnComputePassEncoderInsertDebugMarker(Get(), reinterpret_cast<char const * >(groupLabel));
     }
@@ -1057,20 +1067,11 @@ namespace dawn {
         void ComputePassEncoder::PushDebugGroup(char const * groupLabel) const {
         dawnComputePassEncoderPushDebugGroup(Get(), reinterpret_cast<char const * >(groupLabel));
     }
-        void ComputePassEncoder::SetPipeline(ComputePipeline const& pipeline) const {
-        dawnComputePassEncoderSetPipeline(Get(), pipeline.Get());
-    }
         void ComputePassEncoder::SetBindGroup(uint32_t groupIndex, BindGroup const& group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets) const {
         dawnComputePassEncoderSetBindGroup(Get(), groupIndex, group.Get(), dynamicOffsetCount, reinterpret_cast<uint64_t const * >(dynamicOffsets));
     }
-        void ComputePassEncoder::Dispatch(uint32_t x, uint32_t y, uint32_t z) const {
-        dawnComputePassEncoderDispatch(Get(), x, y, z);
-    }
-        void ComputePassEncoder::DispatchIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const {
-        dawnComputePassEncoderDispatchIndirect(Get(), indirectBuffer.Get(), indirectOffset);
-    }
-        void ComputePassEncoder::EndPass() const {
-        dawnComputePassEncoderEndPass(Get());
+        void ComputePassEncoder::SetPipeline(ComputePipeline const& pipeline) const {
+        dawnComputePassEncoderSetPipeline(Get(), pipeline.Get());
     }
     void ComputePassEncoder::DawnReference(DawnComputePassEncoder handle) {
         if (handle != nullptr) {
@@ -1126,6 +1127,9 @@ namespace dawn {
             result.data
         };
     }
+        void Device::CreateBufferMappedAsync(BufferDescriptor const * descriptor, BufferCreateMappedCallback callback, void * userdata) const {
+        dawnDeviceCreateBufferMappedAsync(Get(), reinterpret_cast<DawnBufferDescriptor const * >(descriptor), callback, reinterpret_cast<void * >(userdata));
+    }
         CommandEncoder Device::CreateCommandEncoder(CommandEncoderDescriptor const * descriptor) const {
         auto result = dawnDeviceCreateCommandEncoder(Get(), reinterpret_cast<DawnCommandEncoderDescriptor const * >(descriptor));
         return CommandEncoder::Acquire(result);
@@ -1133,10 +1137,6 @@ namespace dawn {
         ComputePipeline Device::CreateComputePipeline(ComputePipelineDescriptor const * descriptor) const {
         auto result = dawnDeviceCreateComputePipeline(Get(), reinterpret_cast<DawnComputePipelineDescriptor const * >(descriptor));
         return ComputePipeline::Acquire(result);
-    }
-        RenderPipeline Device::CreateRenderPipeline(RenderPipelineDescriptor const * descriptor) const {
-        auto result = dawnDeviceCreateRenderPipeline(Get(), reinterpret_cast<DawnRenderPipelineDescriptor const * >(descriptor));
-        return RenderPipeline::Acquire(result);
     }
         PipelineLayout Device::CreatePipelineLayout(PipelineLayoutDescriptor const * descriptor) const {
         auto result = dawnDeviceCreatePipelineLayout(Get(), reinterpret_cast<DawnPipelineLayoutDescriptor const * >(descriptor));
@@ -1149,6 +1149,10 @@ namespace dawn {
         RenderBundleEncoder Device::CreateRenderBundleEncoder(RenderBundleEncoderDescriptor const * descriptor) const {
         auto result = dawnDeviceCreateRenderBundleEncoder(Get(), reinterpret_cast<DawnRenderBundleEncoderDescriptor const * >(descriptor));
         return RenderBundleEncoder::Acquire(result);
+    }
+        RenderPipeline Device::CreateRenderPipeline(RenderPipelineDescriptor const * descriptor) const {
+        auto result = dawnDeviceCreateRenderPipeline(Get(), reinterpret_cast<DawnRenderPipelineDescriptor const * >(descriptor));
+        return RenderPipeline::Acquire(result);
     }
         Sampler Device::CreateSampler(SamplerDescriptor const * descriptor) const {
         auto result = dawnDeviceCreateSampler(Get(), reinterpret_cast<DawnSamplerDescriptor const * >(descriptor));
@@ -1169,21 +1173,18 @@ namespace dawn {
         void Device::InjectError(ErrorType type, char const * message) const {
         dawnDeviceInjectError(Get(), static_cast<DawnErrorType>(type), reinterpret_cast<char const * >(message));
     }
-        void Device::Tick() const {
-        dawnDeviceTick(Get());
+        bool Device::PopErrorScope(ErrorCallback callback, void * userdata) const {
+        auto result = dawnDevicePopErrorScope(Get(), callback, reinterpret_cast<void * >(userdata));
+        return result;
     }
         void Device::PushErrorScope(ErrorFilter filter) const {
         dawnDevicePushErrorScope(Get(), static_cast<DawnErrorFilter>(filter));
     }
-        void Device::CreateBufferMappedAsync(BufferDescriptor const * descriptor, BufferCreateMappedCallback callback, void * userdata) const {
-        dawnDeviceCreateBufferMappedAsync(Get(), reinterpret_cast<DawnBufferDescriptor const * >(descriptor), callback, reinterpret_cast<void * >(userdata));
-    }
         void Device::SetUncapturedErrorCallback(ErrorCallback callback, void * userdata) const {
         dawnDeviceSetUncapturedErrorCallback(Get(), callback, reinterpret_cast<void * >(userdata));
     }
-        bool Device::PopErrorScope(ErrorCallback callback, void * userdata) const {
-        auto result = dawnDevicePopErrorScope(Get(), callback, reinterpret_cast<void * >(userdata));
-        return result;
+        void Device::Tick() const {
+        dawnDeviceTick(Get());
     }
     void Device::DawnReference(DawnDevice handle) {
         if (handle != nullptr) {
@@ -1243,15 +1244,15 @@ namespace dawn {
 
 
 
-        void Queue::Submit(uint32_t commandCount, CommandBuffer const * commands) const {
-        dawnQueueSubmit(Get(), commandCount, reinterpret_cast<DawnCommandBuffer const * >(commands));
+        Fence Queue::CreateFence(FenceDescriptor const * descriptor) const {
+        auto result = dawnQueueCreateFence(Get(), reinterpret_cast<DawnFenceDescriptor const * >(descriptor));
+        return Fence::Acquire(result);
     }
         void Queue::Signal(Fence const& fence, uint64_t signalValue) const {
         dawnQueueSignal(Get(), fence.Get(), signalValue);
     }
-        Fence Queue::CreateFence(FenceDescriptor const * descriptor) const {
-        auto result = dawnQueueCreateFence(Get(), reinterpret_cast<DawnFenceDescriptor const * >(descriptor));
-        return Fence::Acquire(result);
+        void Queue::Submit(uint32_t commandCount, CommandBuffer const * commands) const {
+        dawnQueueSubmit(Get(), commandCount, reinterpret_cast<DawnCommandBuffer const * >(commands));
     }
     void Queue::DawnReference(DawnQueue handle) {
         if (handle != nullptr) {
@@ -1287,23 +1288,21 @@ namespace dawn {
 
 
 
-        void RenderBundleEncoder::SetPipeline(RenderPipeline const& pipeline) const {
-        dawnRenderBundleEncoderSetPipeline(Get(), pipeline.Get());
-    }
-        void RenderBundleEncoder::SetBindGroup(uint32_t groupIndex, BindGroup const& group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets) const {
-        dawnRenderBundleEncoderSetBindGroup(Get(), groupIndex, group.Get(), dynamicOffsetCount, reinterpret_cast<uint64_t const * >(dynamicOffsets));
-    }
         void RenderBundleEncoder::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) const {
         dawnRenderBundleEncoderDraw(Get(), vertexCount, instanceCount, firstVertex, firstInstance);
     }
         void RenderBundleEncoder::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance) const {
         dawnRenderBundleEncoderDrawIndexed(Get(), indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
     }
+        void RenderBundleEncoder::DrawIndexedIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const {
+        dawnRenderBundleEncoderDrawIndexedIndirect(Get(), indirectBuffer.Get(), indirectOffset);
+    }
         void RenderBundleEncoder::DrawIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const {
         dawnRenderBundleEncoderDrawIndirect(Get(), indirectBuffer.Get(), indirectOffset);
     }
-        void RenderBundleEncoder::DrawIndexedIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const {
-        dawnRenderBundleEncoderDrawIndexedIndirect(Get(), indirectBuffer.Get(), indirectOffset);
+        RenderBundle RenderBundleEncoder::Finish(RenderBundleDescriptor const * descriptor) const {
+        auto result = dawnRenderBundleEncoderFinish(Get(), reinterpret_cast<DawnRenderBundleDescriptor const * >(descriptor));
+        return RenderBundle::Acquire(result);
     }
         void RenderBundleEncoder::InsertDebugMarker(char const * groupLabel) const {
         dawnRenderBundleEncoderInsertDebugMarker(Get(), reinterpret_cast<char const * >(groupLabel));
@@ -1314,15 +1313,17 @@ namespace dawn {
         void RenderBundleEncoder::PushDebugGroup(char const * groupLabel) const {
         dawnRenderBundleEncoderPushDebugGroup(Get(), reinterpret_cast<char const * >(groupLabel));
     }
-        void RenderBundleEncoder::SetVertexBuffers(uint32_t startSlot, uint32_t count, Buffer const * buffers, uint64_t const * offsets) const {
-        dawnRenderBundleEncoderSetVertexBuffers(Get(), startSlot, count, reinterpret_cast<DawnBuffer const * >(buffers), reinterpret_cast<uint64_t const * >(offsets));
+        void RenderBundleEncoder::SetBindGroup(uint32_t groupIndex, BindGroup const& group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets) const {
+        dawnRenderBundleEncoderSetBindGroup(Get(), groupIndex, group.Get(), dynamicOffsetCount, reinterpret_cast<uint64_t const * >(dynamicOffsets));
     }
         void RenderBundleEncoder::SetIndexBuffer(Buffer const& buffer, uint64_t offset) const {
         dawnRenderBundleEncoderSetIndexBuffer(Get(), buffer.Get(), offset);
     }
-        RenderBundle RenderBundleEncoder::Finish(RenderBundleDescriptor const * descriptor) const {
-        auto result = dawnRenderBundleEncoderFinish(Get(), reinterpret_cast<DawnRenderBundleDescriptor const * >(descriptor));
-        return RenderBundle::Acquire(result);
+        void RenderBundleEncoder::SetPipeline(RenderPipeline const& pipeline) const {
+        dawnRenderBundleEncoderSetPipeline(Get(), pipeline.Get());
+    }
+        void RenderBundleEncoder::SetVertexBuffer(uint32_t slot, Buffer const& buffer, uint64_t offset) const {
+        dawnRenderBundleEncoderSetVertexBuffer(Get(), slot, buffer.Get(), offset);
     }
     void RenderBundleEncoder::DawnReference(DawnRenderBundleEncoder handle) {
         if (handle != nullptr) {
@@ -1341,23 +1342,20 @@ namespace dawn {
 
 
 
-        void RenderPassEncoder::SetPipeline(RenderPipeline const& pipeline) const {
-        dawnRenderPassEncoderSetPipeline(Get(), pipeline.Get());
-    }
-        void RenderPassEncoder::SetBindGroup(uint32_t groupIndex, BindGroup const& group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets) const {
-        dawnRenderPassEncoderSetBindGroup(Get(), groupIndex, group.Get(), dynamicOffsetCount, reinterpret_cast<uint64_t const * >(dynamicOffsets));
-    }
         void RenderPassEncoder::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) const {
         dawnRenderPassEncoderDraw(Get(), vertexCount, instanceCount, firstVertex, firstInstance);
     }
         void RenderPassEncoder::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance) const {
         dawnRenderPassEncoderDrawIndexed(Get(), indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
     }
+        void RenderPassEncoder::DrawIndexedIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const {
+        dawnRenderPassEncoderDrawIndexedIndirect(Get(), indirectBuffer.Get(), indirectOffset);
+    }
         void RenderPassEncoder::DrawIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const {
         dawnRenderPassEncoderDrawIndirect(Get(), indirectBuffer.Get(), indirectOffset);
     }
-        void RenderPassEncoder::DrawIndexedIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const {
-        dawnRenderPassEncoderDrawIndexedIndirect(Get(), indirectBuffer.Get(), indirectOffset);
+        void RenderPassEncoder::EndPass() const {
+        dawnRenderPassEncoderEndPass(Get());
     }
         void RenderPassEncoder::ExecuteBundles(uint32_t bundlesCount, RenderBundle const * bundles) const {
         dawnRenderPassEncoderExecuteBundles(Get(), bundlesCount, reinterpret_cast<DawnRenderBundle const * >(bundles));
@@ -1371,26 +1369,29 @@ namespace dawn {
         void RenderPassEncoder::PushDebugGroup(char const * groupLabel) const {
         dawnRenderPassEncoderPushDebugGroup(Get(), reinterpret_cast<char const * >(groupLabel));
     }
-        void RenderPassEncoder::SetStencilReference(uint32_t reference) const {
-        dawnRenderPassEncoderSetStencilReference(Get(), reference);
+        void RenderPassEncoder::SetBindGroup(uint32_t groupIndex, BindGroup const& group, uint32_t dynamicOffsetCount, uint64_t const * dynamicOffsets) const {
+        dawnRenderPassEncoderSetBindGroup(Get(), groupIndex, group.Get(), dynamicOffsetCount, reinterpret_cast<uint64_t const * >(dynamicOffsets));
     }
         void RenderPassEncoder::SetBlendColor(Color const * color) const {
         dawnRenderPassEncoderSetBlendColor(Get(), reinterpret_cast<DawnColor const * >(color));
     }
-        void RenderPassEncoder::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth) const {
-        dawnRenderPassEncoderSetViewport(Get(), x, y, width, height, minDepth, maxDepth);
+        void RenderPassEncoder::SetIndexBuffer(Buffer const& buffer, uint64_t offset) const {
+        dawnRenderPassEncoderSetIndexBuffer(Get(), buffer.Get(), offset);
+    }
+        void RenderPassEncoder::SetPipeline(RenderPipeline const& pipeline) const {
+        dawnRenderPassEncoderSetPipeline(Get(), pipeline.Get());
     }
         void RenderPassEncoder::SetScissorRect(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const {
         dawnRenderPassEncoderSetScissorRect(Get(), x, y, width, height);
     }
-        void RenderPassEncoder::SetVertexBuffers(uint32_t startSlot, uint32_t count, Buffer const * buffers, uint64_t const * offsets) const {
-        dawnRenderPassEncoderSetVertexBuffers(Get(), startSlot, count, reinterpret_cast<DawnBuffer const * >(buffers), reinterpret_cast<uint64_t const * >(offsets));
+        void RenderPassEncoder::SetStencilReference(uint32_t reference) const {
+        dawnRenderPassEncoderSetStencilReference(Get(), reference);
     }
-        void RenderPassEncoder::SetIndexBuffer(Buffer const& buffer, uint64_t offset) const {
-        dawnRenderPassEncoderSetIndexBuffer(Get(), buffer.Get(), offset);
+        void RenderPassEncoder::SetVertexBuffer(uint32_t slot, Buffer const& buffer, uint64_t offset) const {
+        dawnRenderPassEncoderSetVertexBuffer(Get(), slot, buffer.Get(), offset);
     }
-        void RenderPassEncoder::EndPass() const {
-        dawnRenderPassEncoderEndPass(Get());
+        void RenderPassEncoder::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth) const {
+        dawnRenderPassEncoderSetViewport(Get(), x, y, width, height, minDepth, maxDepth);
     }
     void RenderPassEncoder::DawnReference(DawnRenderPassEncoder handle) {
         if (handle != nullptr) {
