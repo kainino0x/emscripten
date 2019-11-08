@@ -589,11 +589,11 @@ var LibraryWebGPU = {
       if (vbPtr === 0) return undefined;
 
       return {
-        stride: {{{ gpu.makeGetU64('vbPtr', C_STRUCTS.DawnVertexBufferDescriptor.stride) }}},
+        arrayStride: {{{ gpu.makeGetU64('vbPtr', C_STRUCTS.DawnVertexBufferDescriptor.stride) }}},
         stepMode: WebGPU.InputStepMode[
           {{{ gpu.makeGetU32('vbPtr', C_STRUCTS.DawnVertexBufferDescriptor.stepMode) }}}],
         // TODO(kainino0x): Update naming once Dawn matches WebGPU.
-        attributeSet: makeVertexAttributes(
+        attributes: makeVertexAttributes(
           {{{ gpu.makeGetU32('vbPtr', C_STRUCTS.DawnVertexBufferDescriptor.attributeCount) }}},
           {{{ makeGetValue('vbPtr', C_STRUCTS.DawnVertexBufferDescriptor.attributes, '*') }}}),
       };
@@ -637,7 +637,7 @@ var LibraryWebGPU = {
         {{{ makeGetValue('descriptor', C_STRUCTS.DawnRenderPipelineDescriptor.colorStates, '*') }}}),
       depthStencilState: makeDepthStencilState(
         {{{ makeGetValue('descriptor', C_STRUCTS.DawnRenderPipelineDescriptor.depthStencilState, '*') }}}),
-      vertexInput: makeVertexInput(
+      vertexState: makeVertexInput(
         {{{ makeGetValue('descriptor', C_STRUCTS.DawnRenderPipelineDescriptor.vertexInput, '*') }}}),
       sampleCount: {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnRenderPipelineDescriptor.sampleCount) }}},
       sampleMask: {{{ gpu.makeGetU32('descriptor', C_STRUCTS.DawnRenderPipelineDescriptor.sampleMask) }}},
