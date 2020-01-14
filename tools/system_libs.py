@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 from __future__ import print_function
+import glob
 import hashlib
 import itertools
 import json
@@ -25,6 +26,11 @@ stderr = None
 
 logger = logging.getLogger('system_libs')
 
+LIBC_SOCKETS = ['socket.c', 'socketpair.c', 'shutdown.c', 'bind.c', 'connect.c',
+                'listen.c', 'accept.c', 'getsockname.c', 'getpeername.c', 'send.c',
+                'recv.c', 'sendto.c', 'recvfrom.c', 'sendmsg.c', 'recvmsg.c',
+                'getsockopt.c', 'setsockopt.c', 'freeaddrinfo.c']
+
 
 def files_in_path(path_components, filenames):
   srcdir = shared.path_from_root(*path_components)
@@ -34,6 +40,20 @@ def files_in_path(path_components, filenames):
 def glob_in_path(path_components, glob_pattern, excludes=()):
   srcdir = shared.path_from_root(*path_components)
   return [f for f in iglob(os.path.join(srcdir, glob_pattern)) if os.path.basename(f) not in excludes]
+
+
+def get_all_files_under(dirname):
+  for path, subdirs, files in os.walk(dirname):
+    for name in files:
+      yield os.path.join(path, name)
+
+
+def dir_is_newer(dir_a, dir_b):
+  assert os.path.exists(dir_a)
+  assert os.path.exists(dir_b)
+  newest_a = max([os.path.getmtime(x) for x in get_all_files_under(dir_a)])
+  newest_b = max([os.path.getmtime(x) for x in get_all_files_under(dir_b)])
+  return newest_a < newest_b
 
 
 def get_cflags(force_object_files=False):
@@ -71,9 +91,13 @@ def run_commands(commands):
 
 def create_lib(libname, inputs):
   """Create a library from a set of input objects."""
-  if libname.endswith('.bc'):
-    shared.Building.link_to_object(inputs, libname)
-  elif libname.endswith('.a'):
+  suffix = os.path.splitext(libname)[1]
+  if suffix in ('.bc', '.o'):
+    if len(inputs) == 1:
+      shutil.copyfile(inputs[0], libname)
+    else:
+      shared.Building.link_to_object(inputs, libname)
+  elif suffix == '.a':
     shared.Building.emar('cr', libname, inputs)
   else:
     raise Exception('unknown suffix ' + libname)
@@ -342,9 +366,9 @@ class Library(object):
 
   def build(self):
     """Builds the library and returns the path to the file."""
-    lib_filename = self.in_temp(self.get_filename())
-    create_lib(lib_filename, self.build_objects())
-    return lib_filename
+    out_filename = self.in_temp(self.get_filename())
+    create_lib(out_filename, self.build_objects())
+    return out_filename
 
   @classmethod
   def _inherit_list(cls, attr):
@@ -623,8 +647,10 @@ class libc(AsanInstrumentedLibrary, MuslInternalLibrary, MTLibrary):
   # custom standard library. The same for other libc/libm builds.
   cflags = ['-Os', '-fno-builtin']
 
-  # Hide several musl warnings that produce a lot of spam to unit test build server logs.
-  # TODO: When updating musl the next time, feel free to recheck which of their warnings might have been fixed, and which ones of these could be cleaned up.
+  # Hide several musl warnings that produce a lot of spam to unit test build
+  # server logs.  TODO: When updating musl the next time, feel free to recheck
+  # which of their warnings might have been fixed, and which ones of these could
+  # be cleaned up.
   cflags += ['-Wno-return-type', '-Wno-parentheses', '-Wno-ignored-attributes',
              '-Wno-shift-count-overflow', '-Wno-shift-negative-value',
              '-Wno-dangling-else', '-Wno-unknown-pragmas',
@@ -654,6 +680,8 @@ class libc(AsanInstrumentedLibrary, MuslInternalLibrary, MTLibrary):
         'getgrouplist.c', 'initgroups.c', 'wordexp.c', 'timer_create.c',
         'faccessat.c',
     ]
+
+    blacklist += LIBC_SOCKETS
 
     # individual math files
     blacklist += [
@@ -725,6 +753,28 @@ class libc(AsanInstrumentedLibrary, MuslInternalLibrary, MTLibrary):
     return depends
 
 
+class libsockets(MuslInternalLibrary, MTLibrary):
+  name = 'libsockets'
+  symbols = set()
+
+  cflags = ['-Os', '-fno-builtin']
+
+  def get_files(self):
+    network_dir = shared.path_from_root('system', 'lib', 'libc', 'musl', 'src', 'network')
+    return [os.path.join(network_dir, x) for x in LIBC_SOCKETS]
+
+
+class libsockets_proxy(MuslInternalLibrary, MTLibrary):
+  name = 'libsockets_proxy'
+  symbols = set()
+
+  cflags = ['-Os']
+
+  def get_files(self):
+    return [shared.path_from_root('system', 'lib', 'websocket', 'websocket_to_posix_socket.cpp'),
+            shared.path_from_root('system', 'lib', 'libc', 'musl', 'src', 'network', 'inet_addr.c')]
+
+
 class libc_wasm(MuslInternalLibrary):
   name = 'libc-wasm'
   cflags = ['-O2', '-fno-builtin']
@@ -738,6 +788,24 @@ class libc_wasm(MuslInternalLibrary):
   def can_use(self):
     # if building to wasm, we need more math code, since we have fewer builtins
     return shared.Settings.WASM
+
+
+class crt1(MuslInternalLibrary):
+  name = 'crt1'
+  cflags = ['-O2']
+  src_dir = ['system', 'lib', 'libc']
+  src_files = ['crt1.c']
+
+  force_object_files = True
+
+  def get_ext(self):
+    return '.o'
+
+  def can_use(self):
+    return shared.Settings.STANDALONE_WASM
+
+  def can_build(self):
+    return shared.Settings.WASM_BACKEND
 
 
 class libc_extras(MuslInternalLibrary):
@@ -851,12 +919,9 @@ class libmalloc(MTLibrary, NoBCLibrary):
     self.is_debug = kwargs.pop('is_debug')
     self.use_errno = kwargs.pop('use_errno')
     self.is_tracing = kwargs.pop('is_tracing')
+    self.use_64bit_ops = kwargs.pop('use_64bit_ops')
 
     super(libmalloc, self).__init__(**kwargs)
-
-    if self.malloc != 'dlmalloc':
-      assert not self.is_mt
-      assert not self.is_tracing
 
   def get_files(self):
     malloc = shared.path_from_root('system', 'lib', {
@@ -876,6 +941,8 @@ class libmalloc(MTLibrary, NoBCLibrary):
       cflags += ['-DMALLOC_FAILURE_ACTION=', '-DEMSCRIPTEN_NO_ERRNO']
     if self.is_tracing:
       cflags += ['--tracing']
+    if self.use_64bit_ops:
+      cflags += ['-DEMMALLOC_USE_64BIT_OPS=1']
     return cflags
 
   def get_base_name_prefix(self):
@@ -890,6 +957,8 @@ class libmalloc(MTLibrary, NoBCLibrary):
       name += '-noerrno'
     if self.is_tracing:
       name += '-tracing'
+    if self.use_64bit_ops:
+      name += '-64bit'
     return name
 
   def can_use(self):
@@ -897,7 +966,7 @@ class libmalloc(MTLibrary, NoBCLibrary):
 
   @classmethod
   def vary_on(cls):
-    return super(libmalloc, cls).vary_on() + ['is_debug', 'use_errno', 'is_tracing']
+    return super(libmalloc, cls).vary_on() + ['is_debug', 'use_errno', 'is_tracing', 'use_64bit_ops']
 
   @classmethod
   def get_default_variation(cls, **kwargs):
@@ -906,15 +975,15 @@ class libmalloc(MTLibrary, NoBCLibrary):
       is_debug=shared.Settings.DEBUG_LEVEL >= 3,
       use_errno=shared.Settings.SUPPORT_ERRNO,
       is_tracing=shared.Settings.EMSCRIPTEN_TRACING,
+      use_64bit_ops=shared.Settings.MALLOC == 'emmalloc' and (shared.Settings.WASM == 1 or (shared.Settings.WASM_BACKEND and shared.Settings.WASM2JS == 0)),
       **kwargs
     )
 
   @classmethod
   def variations(cls):
     combos = super(libmalloc, cls).variations()
-    return ([dict(malloc='dlmalloc', **combo) for combo in combos] +
-            [dict(malloc='emmalloc', **combo) for combo in combos
-             if not combo['is_mt'] and not combo['is_tracing']])
+    return ([dict(malloc='dlmalloc', **combo) for combo in combos if not combo['use_64bit_ops']] +
+            [dict(malloc='emmalloc', **combo) for combo in combos])
 
 
 class libal(Library):
@@ -947,6 +1016,7 @@ class libgl(MTLibrary):
     self.is_legacy = kwargs.pop('is_legacy')
     self.is_webgl2 = kwargs.pop('is_webgl2')
     self.is_ofb = kwargs.pop('is_ofb')
+    self.is_full_es3 = kwargs.pop('is_full_es3')
     super(libgl, self).__init__(**kwargs)
 
   def get_base_name(self):
@@ -957,6 +1027,8 @@ class libgl(MTLibrary):
       name += '-webgl2'
     if self.is_ofb:
       name += '-ofb'
+    if self.is_full_es3:
+      name += '-full_es3'
     return name
 
   def get_cflags(self):
@@ -964,21 +1036,24 @@ class libgl(MTLibrary):
     if self.is_legacy:
       cflags += ['-DLEGACY_GL_EMULATION=1']
     if self.is_webgl2:
-      cflags += ['-DUSE_WEBGL2=1', '-s', 'USE_WEBGL2=1']
+      cflags += ['-DMAX_WEBGL_VERSION=2', '-s', 'MAX_WEBGL_VERSION=2']
     if self.is_ofb:
       cflags += ['-D__EMSCRIPTEN_OFFSCREEN_FRAMEBUFFER__']
+    if self.is_full_es3:
+      cflags += ['-D__EMSCRIPTEN_FULL_ES3__']
     return cflags
 
   @classmethod
   def vary_on(cls):
-    return super(libgl, cls).vary_on() + ['is_legacy', 'is_webgl2', 'is_ofb']
+    return super(libgl, cls).vary_on() + ['is_legacy', 'is_webgl2', 'is_ofb', 'is_full_es3']
 
   @classmethod
   def get_default_variation(cls, **kwargs):
     return super(libgl, cls).get_default_variation(
       is_legacy=shared.Settings.LEGACY_GL_EMULATION,
-      is_webgl2=shared.Settings.USE_WEBGL2,
+      is_webgl2=shared.Settings.MAX_WEBGL_VERSION >= 2,
       is_ofb=shared.Settings.OFFSCREEN_FRAMEBUFFER,
+      is_full_es3=shared.Settings.FULL_ES3,
       **kwargs
     )
 
@@ -1193,18 +1268,52 @@ class libstandalonewasm(MuslInternalLibrary):
   cflags = ['-Os']
   src_dir = ['system', 'lib']
 
+  def __init__(self, **kwargs):
+    self.is_mem_grow = kwargs.pop('is_mem_grow')
+    super(libstandalonewasm, self).__init__(**kwargs)
+
+  def get_base_name(self):
+    name = super(libstandalonewasm, self).get_base_name()
+    if self.is_mem_grow:
+      name += '-memgrow'
+    return name
+
+  def get_cflags(self):
+    cflags = super(libstandalonewasm, self).get_cflags()
+    cflags += ['-DNDEBUG']
+    if self.is_mem_grow:
+      cflags += ['-D__EMSCRIPTEN_MEMORY_GROWTH__=1']
+    return cflags
+
+  @classmethod
+  def vary_on(cls):
+    return super(libstandalonewasm, cls).vary_on() + ['is_mem_grow']
+
+  @classmethod
+  def get_default_variation(cls, **kwargs):
+    return super(libstandalonewasm, cls).get_default_variation(
+      is_mem_grow=shared.Settings.ALLOW_MEMORY_GROWTH,
+      **kwargs
+    )
+
   def get_files(self):
     base_files = files_in_path(
         path_components=['system', 'lib'],
         filenames=['standalone_wasm.c'])
-    musl_files = files_in_path(
+    # It is more efficient to use JS methods for time, normally.
+    time_files = files_in_path(
         path_components=['system', 'lib', 'libc', 'musl', 'src', 'time'],
         filenames=['strftime.c',
                    '__month_to_secs.c',
                    '__tm_to_secs.c',
                    '__tz.c',
                    '__year_to_secs.c'])
-    return base_files + musl_files
+    # It is more efficient to use JS for __assert_fail, as it avoids always
+    # including fprintf etc.
+    exit_files = files_in_path(
+        path_components=['system', 'lib', 'libc', 'musl', 'src', 'exit'],
+        filenames=['assert.c'])
+    return base_files + time_files + exit_files
 
   def can_build(self):
     return shared.Settings.WASM_BACKEND
@@ -1337,6 +1446,9 @@ def calculate(temp_files, in_temp, stdout_, stderr_, forced=[]):
       if d not in shared.Settings.EXPORTED_FUNCTIONS:
         shared.Settings.EXPORTED_FUNCTIONS.append(d)
 
+  if shared.Settings.STANDALONE_WASM:
+    add_library(system_libs_map['crt1'])
+
   # Go over libraries to figure out which we must include
   for lib in system_libs:
     if lib.name in already_included:
@@ -1388,6 +1500,11 @@ def calculate(temp_files, in_temp, stdout_, stderr_, forced=[]):
   if shared.Settings.STANDALONE_WASM:
     add_library(system_libs_map['libstandalonewasm'])
 
+  if shared.Settings.PROXY_POSIX_SOCKETS:
+    add_library(system_libs_map['libsockets_proxy'])
+  else:
+    add_library(system_libs_map['libsockets'])
+
   if shared.Settings.USE_WEBGPU:
     add_library(system_libs_map['libdawncpp'])
 
@@ -1427,6 +1544,34 @@ class Ports(object):
     return shared.static_library_name(name)
 
   @staticmethod
+  def get_include_dir():
+    dirname = shared.Cache.get_path('include')
+    shared.safe_ensure_dirs(dirname)
+    return dirname
+
+  @staticmethod
+  def install_header_dir(src_dir, target=None):
+    if not target:
+      target = os.path.basename(src_dir)
+    dest = os.path.join(Ports.get_include_dir(), target)
+    shared.try_delete(dest)
+    logger.debug('installing headers: ' + dest)
+    shutil.copytree(src_dir, dest)
+
+  @staticmethod
+  def install_headers(src_dir, pattern="*.h", target=None):
+    logger.debug("install_headers")
+    dest = Ports.get_include_dir()
+    if target:
+      dest = os.path.join(dest, target)
+      shared.safe_ensure_dirs(dest)
+    matches = glob.glob(os.path.join(src_dir, pattern))
+    assert matches, "no headers found to install in %s" % src_dir
+    for f in matches:
+      logger.debug('installing: ' + os.path.join(dest, os.path.basename(f)))
+      shutil.copyfile(f, os.path.join(dest, os.path.basename(f)))
+
+  @staticmethod
   def build_port(src_path, output_path, includes=[], flags=[], exclude_files=[], exclude_dirs=[]):
     srcs = []
     for root, dirs, files in os.walk(src_path, topdown=False):
@@ -1435,7 +1580,7 @@ class Ports(object):
       for f in files:
         ext = os.path.splitext(f)[1]
         if ext in ('.c', '.cpp') and not any((excluded in f) for excluded in exclude_files):
-            srcs.append(os.path.join(root, f))
+          srcs.append(os.path.join(root, f))
     include_commands = ['-I' + src_path]
     for include in includes:
       include_commands.append('-I' + include)
@@ -1448,7 +1593,6 @@ class Ports(object):
       objects.append(obj)
 
     run_commands(commands)
-    print('create_lib', output_path)
     create_lib(output_path, objects)
     return output_path
 
@@ -1484,6 +1628,10 @@ class Ports(object):
     # To compute the sha512 hash, run `curl URL | sha512sum`.
     fullname = os.path.join(Ports.get_dir(), name)
 
+    # EMCC_LOCAL_PORTS: A hacky way to use a local directory for a port. This
+    #                   is not tested but can be useful for debugging
+    #                   changes to a port.
+    #
     # if EMCC_LOCAL_PORTS is set, we use a local directory as our ports. This is useful
     # for testing. This env var should be in format
     #     name=dir,name=dir
@@ -1509,13 +1657,17 @@ class Ports(object):
               logger.error('port %s lacks .SUBDIR attribute, which we need in order to override it locally, please update it' % name)
               sys.exit(1)
             subdir = port.SUBDIR
-            logger.warning('grabbing local port: ' + name + ' from ' + path + ' to ' + fullname + ' (subdir: ' + subdir + ')')
-            shared.try_delete(fullname)
-            shutil.copytree(path, os.path.join(fullname, subdir))
-            Ports.clear_project_build(name)
+            target = os.path.join(fullname, subdir)
+            if os.path.exists(target) and not dir_is_newer(path, target):
+              logger.warning('not grabbing local port: ' + name + ' from ' + path + ' to ' + fullname + ' (subdir: ' + subdir + ') as the destination ' + target + ' is newer (run emcc --clear-ports if that is incorrect)')
+            else:
+              logger.warning('grabbing local port: ' + name + ' from ' + path + ' to ' + fullname + ' (subdir: ' + subdir + ')')
+              shared.try_delete(fullname)
+              shutil.copytree(path, target)
+              Ports.clear_project_build(name)
+            return
       finally:
         shared.Cache.release_cache_lock()
-      return
 
     if is_tarbz2:
       fullpath = fullname + '.tar.bz2'
@@ -1535,7 +1687,7 @@ class Ports(object):
 
     def retrieve():
       # retrieve from remote server
-      logger.warning('retrieving port: ' + name + ' from ' + url)
+      logger.info('retrieving port: ' + name + ' from ' + url)
       try:
         import requests
         response = requests.get(url)
@@ -1572,7 +1724,7 @@ class Ports(object):
       return bool(re.match(subdir + r'(\\|/|$)', names[0]))
 
     def unpack():
-      logger.warning('unpacking port: ' + name)
+      logger.info('unpacking port: ' + name)
       shared.safe_ensure_dirs(fullname)
 
       # TODO: Someday when we are using Python 3, we might want to change the

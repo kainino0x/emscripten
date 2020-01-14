@@ -69,6 +69,11 @@ i8x16 TESTFN i8x16_shuffle_interleave_bytes(i8x16 x, i8x16 y) {
 i32x4 TESTFN i32x4_shuffle_reverse(i32x4 vec) {
   return __builtin_shufflevector(vec, vec, 3, 2, 1, 0);
 }
+#ifdef __wasm_unimplemented_simd128__
+i8x16 TESTFN v8x16_swizzle(i8x16 x, i8x16 y) {
+  return __builtin_wasm_swizzle_v8x16(x, y);
+}
+#endif // __wasm_unimplemented_simd128__
 i8x16 TESTFN i8x16_splat(int32_t x) {
   return (i8x16) {x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x};
 }
@@ -362,6 +367,12 @@ i8x16 TESTFN i8x16_sub_saturate_u(i8x16 x, i8x16 y) {
 i8x16 TESTFN i8x16_mul(i8x16 x, i8x16 y) {
   return x * y;
 }
+// Skip {min,max}_{s,u} because they do not have short builtin equivalents
+#ifdef __wasm_unimplemented_simd128__
+i8x16 TESTFN i8x16_avgr_u(i8x16 x, i8x16 y) {
+  return __builtin_wasm_avgr_u_i8x16(x, y);
+}
+#endif // __wasm_unimplemented_simd128__
 i16x8 TESTFN i16x8_neg(i16x8 vec) {
   return -vec;
 }
@@ -401,6 +412,12 @@ i16x8 TESTFN i16x8_sub_saturate_u(i16x8 x, i16x8 y) {
 i16x8 TESTFN i16x8_mul(i16x8 x, i16x8 y) {
   return x * y;
 }
+// Skip {min,max}_{s,u} because they do not have short builtin equivalents
+#ifdef __wasm_unimplemented_simd128__
+i16x8 TESTFN i16x8_avgr_u(i16x8 x, i16x8 y) {
+  return __builtin_wasm_avgr_u_i16x8(x, y);
+}
+#endif // __wasm_unimplemented_simd128__
 i32x4 TESTFN i32x4_neg(i32x4 vec) {
   return -vec;
 }
@@ -428,6 +445,7 @@ i32x4 TESTFN i32x4_sub(i32x4 x, i32x4 y) {
 i32x4 TESTFN i32x4_mul(i32x4 x, i32x4 y) {
   return x * y;
 }
+// Skip {min,max}_{s,u} because they do not have short builtin equivalents
 i64x2 TESTFN i64x2_neg(i64x2 vec) {
   return -vec;
 }
@@ -721,6 +739,17 @@ int EMSCRIPTEN_KEEPALIVE __attribute__((__optnone__)) main(int argc, char** argv
     ((i8x16){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
   );
   expect_vec(i32x4_shuffle_reverse((i32x4){1, 2, 3, 4}), ((i32x4){4, 3, 2, 1}));
+#ifdef  __wasm_unimplemented_simd128__
+  expect_vec(
+    v8x16_swizzle(
+      (i8x16){0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
+              0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff},
+      (i8x16){0, 4, 8, 12, 16, 255, 129, 128, 127, 17, 15, 13, 12, 8, 4, 0}
+    ),
+    ((i8x16){0xf0, 0xf4, 0xf8, 0xfc, 0x00, 0x00, 0x00, 0x00,
+             0x00, 0x00, 0xff, 0xfd, 0xfc, 0xf8, 0xf4, 0xf0})
+  );
+#endif // __wasm_unimplemented_simd128__
 
   // i8x16 lane accesses
   expect_vec(i8x16_splat(5), ((i8x16){5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5}));
@@ -1157,6 +1186,15 @@ int EMSCRIPTEN_KEEPALIVE __attribute__((__optnone__)) main(int argc, char** argv
     ),
     ((i8x16){0, 230, 255, 0, 255, 6, 106, 237, 230, 52, 223, 76, 0, 6, 127, 126})
   );
+#ifdef __wasm_unimplemented_simd128__
+  expect_vec(
+    i8x16_avgr_u(
+      (i8x16){0, 42, 255, 128, 127, 129, 6, 29, 103, 196, 231, 142, 17, 250, 1, 73},
+      (i8x16){3, 231, 1, 128, 129, 6, 103, 17, 42, 29, 73, 42, 0, 255, 127, 142}
+    ),
+    ((i8x16){2, 137, 128, 128, 128, 68, 55, 23, 73, 113, 152, 92, 9, 253, 64, 108})
+  );
+#endif // __wasm_unimplemented_simd128__
 
   // i16x8 arithmetic
   expect_vec(
@@ -1244,6 +1282,15 @@ int EMSCRIPTEN_KEEPALIVE __attribute__((__optnone__)) main(int argc, char** argv
     ),
     ((i16x8){0, -256, 0, 0, 0, 0, 0, -4})
   );
+#ifdef __wasm_unimplemented_simd128__
+  expect_vec(
+    i16x8_avgr_u(
+      (i16x8){0, -256, -32768, 32512, -32512, -6400, -1536, 32766},
+      (i16x8){768, 1, -32768, -32512, 1536, 18688, -256, 2}
+    ),
+    ((i16x8){384, 32641, -32768, -32768, 17280, -26624, -896, 16384})
+  );
+#endif // __wasm_unimplemented_simd128__
 
   // i32x4 arithmetic
   expect_vec(i32x4_neg((i32x4){0, 1, 0x80000000, 0x7fffffff}), ((i32x4){0, -1, 0x80000000, 0x80000001}));

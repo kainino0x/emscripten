@@ -66,7 +66,8 @@ var LibraryManager = {
       'library_signals.js',
       'library_syscall.js',
       'library_html5.js',
-      'library_stack_trace.js'
+      'library_stack_trace.js',
+      'library_wasi.js'
     ];
 
     if (!DISABLE_EXCEPTION_THROWING) {
@@ -85,27 +86,16 @@ var LibraryManager = {
         'library_fs.js',
         'library_memfs.js',
         'library_tty.js',
-        'library_pipefs.js',
+        'library_pipefs.js', // ok to include it by default since it's only used if the syscall is used
+        'library_sockfs.js', // ok to include it by default since it's only used if the syscall is used
       ]);
 
-      // Additional filesystem libraries (without AUTO_JS_LIBRARIES, link to these explicitly via -lxxx.js)
-      if (AUTO_JS_LIBRARIES) {
-        if (ENVIRONMENT_MAY_BE_WEB || ENVIRONMENT_MAY_BE_WORKER) {
-          libraries = libraries.concat([
-            'library_idbfs.js',
-            'library_proxyfs.js',
-            'library_sockfs.js',
-            'library_workerfs.js',
-          ]);
+      if (NODERAWFS) {
+        // NODERAWFS requires NODEFS
+        if (SYSTEM_JS_LIBRARIES.indexOf('library_nodefs.js') < 0) {
+          libraries.push('library_nodefs.js');
         }
-        if (ENVIRONMENT_MAY_BE_NODE) {
-          libraries = libraries.concat([
-            'library_nodefs.js',
-          ]);
-        }
-        if (NODERAWFS) {
-          libraries.push('library_noderawfs.js')
-        }
+        libraries.push('library_noderawfs.js');
       }
     }
 
@@ -145,17 +135,13 @@ var LibraryManager = {
       libraries.push('library_lz4.js');
     }
 
-    if (USE_WEBGL2) {
+    if (MAX_WEBGL_VERSION >= 2) {
       libraries.push('library_webgl2.js');
     }
 
     if (LEGACY_GL_EMULATION) {
       libraries.push('library_glemu.js');
     }
-
-    libraries.push('library_wasi.js');
-
-    libraries = libraries.concat(additionalLibraries);
 
     if (BOOTSTRAPPING_STRUCT_INFO) libraries = ['library_bootstrap_structInfo.js', 'library_formatString.js'];
 
@@ -431,10 +417,6 @@ function exportRuntime() {
     'makeBigInt',
     'dynCall',
     'getCompilerSetting',
-    'stackSave',
-    'stackRestore',
-    'stackAlloc',
-    'establishStackSpace',
     'print',
     'printErr',
     'getTempRet0',
@@ -444,21 +426,36 @@ function exportRuntime() {
   ];
 
   if (!MINIMAL_RUNTIME) {
-    runtimeElements.push('Pointer_stringify');
     runtimeElements.push('warnOnce');
+    runtimeElements.push('stackSave');
+    runtimeElements.push('stackRestore');
+    runtimeElements.push('stackAlloc');
+    if (USE_PTHREADS) {
+      runtimeElements.push('establishStackSpace');
+    }
   }
 
-  if (MODULARIZE) {
-    // In MODULARIZE=1 mode, the following functions need to be exported out to Module for worker.js to access.
-    if (STACK_OVERFLOW_CHECK) {
-      runtimeElements.push('writeStackCookie');
-      runtimeElements.push('checkStackCookie');
+  if (STACK_OVERFLOW_CHECK) {
+    runtimeElements.push('writeStackCookie');
+    runtimeElements.push('checkStackCookie');
+    if (!MINIMAL_RUNTIME) {
       runtimeElements.push('abortStackOverflow');
     }
-    if (USE_PTHREADS) {
-      runtimeElements.push('PThread');
-      runtimeElements.push('ExitStatus');
+  }
+
+  if (USE_PTHREADS) {
+    // In pthreads mode, the following functions always need to be exported to
+    // Module for closure compiler, and also for MODULARIZE (so worker.js can
+    // access them).
+    var threadExports = ['PThread', 'ExitStatus', '_pthread_self'];
+    if (WASM) {
+      threadExports.push('wasmMemory');
     }
+
+    threadExports.forEach(function(x) {
+      EXPORTED_RUNTIME_METHODS_SET[x] = 1;
+      runtimeElements.push(x);
+    });
   }
 
   if (SUPPORT_BASE64_EMBEDDING) {

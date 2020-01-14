@@ -69,9 +69,9 @@ var SyscallsLibrary = {
       {{{ makeSetValue('buf', C_STRUCTS.stat.st_ino, 'stat.ino', 'i64') }}};
       return 0;
     },
-    doMsync: function(addr, stream, len, flags) {
+    doMsync: function(addr, stream, len, flags, offset) {
       var buffer = new Uint8Array(HEAPU8.subarray(addr, addr + len));
-      FS.msync(stream, buffer, 0, len, flags);
+      FS.msync(stream, buffer, offset, len, flags);
     },
     doMkdir: function(path, mode) {
       // remove a trailing slash, if one - /a/b/ has basename of '', but
@@ -194,7 +194,8 @@ var SyscallsLibrary = {
     },
 #if SYSCALLS_REQUIRE_FILESYSTEM
     getStreamFromFD: function(fd) {
-      if (!fd) fd = SYSCALLS.get();
+      // TODO: when all syscalls use wasi, can remove the next line
+      if (fd === undefined) fd = SYSCALLS.get();
       var stream = FS.getStream(fd);
       if (!stream) throw new FS.ErrnoError({{{ cDefine('EBADF') }}});
 #if SYSCALL_DEBUG
@@ -253,7 +254,7 @@ var SyscallsLibrary = {
       ptr = res.ptr;
       allocated = res.allocated;
     }
-    SYSCALLS.mappings[ptr] = { malloc: ptr, len: len, allocated: allocated, fd: fd, flags: flags };
+    SYSCALLS.mappings[ptr] = { malloc: ptr, len: len, allocated: allocated, fd: fd, flags: flags, offset: off };
     return ptr;
   },
 
@@ -271,7 +272,7 @@ var SyscallsLibrary = {
     if (!info) return 0;
     if (len === info.len) {
       var stream = FS.getStream(info.fd);
-      SYSCALLS.doMsync(addr, stream, len, info.flags);
+      SYSCALLS.doMsync(addr, stream, len, info.flags, info.offset);
       FS.munmap(stream);
       SYSCALLS.mappings[addr] = null;
       if (info.allocated) {
@@ -511,6 +512,7 @@ var SyscallsLibrary = {
   __syscall97: function(which, varargs) { // setpriority
     return -{{{ cDefine('EPERM') }}};
   },
+#if PROXY_POSIX_SOCKETS == 0
   __syscall102__deps: ['$SOCKFS', '$DNS', '_read_sockaddr', '_write_sockaddr'],
   __syscall102: function(which, varargs) { // socketcall
     var call = SYSCALLS.get(), socketvararg = SYSCALLS.get();
@@ -719,60 +721,20 @@ var SyscallsLibrary = {
 
         return bytesRead;
       }
-      default: abort('unsupported socketcall syscall ' + call);
+      default: {
+#if SYSCALL_DEBUG
+        err('    (socketcall: ' + call + ')');
+#endif
+        return -{{{ cDefine('ENOSYS') }}}; // unsupported feature
+      }
     }
   },
+#endif // ~PROXY_POSIX_SOCKETS==0
   __syscall104: function(which, varargs) { // setitimer
     return -{{{ cDefine('ENOSYS') }}}; // unsupported feature
   },
   __syscall114: function(which, varargs) { // wait4
     abort('cannot wait on child processes');
-  },
-#if EMTERPRETIFY_ASYNC
-  __syscall118__deps: ['$EmterpreterAsync'],
-#endif
-  __syscall118: function(which, varargs) { // fsync
-    var stream = SYSCALLS.getStreamFromFD();
-#if EMTERPRETIFY_ASYNC
-    return EmterpreterAsync.handle(function(resume) {
-      var mount = stream.node.mount;
-      if (!mount.type.syncfs) {
-        // We write directly to the file system, so there's nothing to do here.
-        resume(function() { return 0 });
-        return;
-      }
-      mount.type.syncfs(mount, false, function(err) {
-        if (err) {
-          resume(function() { return -{{{ cDefine('EIO') }}} });
-          return;
-        }
-        resume(function() { return 0 });
-      });
-    });
-#else
-#if WASM_BACKEND && ASYNCIFY
-    return Asyncify.handleSleep(function(wakeUp) {
-      var mount = stream.node.mount;
-      if (!mount.type.syncfs) {
-        // We write directly to the file system, so there's nothing to do here.
-        wakeUp(0);
-        return;
-      }
-      mount.type.syncfs(mount, false, function(err) {
-        if (err) {
-          wakeUp(function() { return -{{{ cDefine('EIO') }}} });
-          return;
-        }
-        wakeUp(0);
-      });
-    });
-#else
-    if (stream.stream_ops && stream.stream_ops.fsync) {
-      return -stream.stream_ops.fsync(stream);
-    }
-    return 0; // we can't do anything synchronously; the in-memory FS is already synced to
-#endif // WASM_BACKEND && ASYNCIFY
-#endif // EMTERPRETIFY_ASYNC
   },
   __syscall121: function(which, varargs) { // setdomainname
     return -{{{ cDefine('EPERM') }}};
@@ -804,29 +766,6 @@ var SyscallsLibrary = {
   __syscall133: function(which, varargs) { // fchdir
     var stream = SYSCALLS.getStreamFromFD();
     FS.chdir(stream.path);
-    return 0;
-  },
-  __syscall140: function(which, varargs) { // llseek
-    var stream = SYSCALLS.getStreamFromFD(), offset_high = SYSCALLS.get(), offset_low = SYSCALLS.get(), result = SYSCALLS.get(), whence = SYSCALLS.get();
-#if SYSCALLS_REQUIRE_FILESYSTEM
-    var HIGH_OFFSET = 0x100000000; // 2^32
-    // use an unsigned operator on low and shift high by 32-bits
-    var offset = offset_high * HIGH_OFFSET + (offset_low >>> 0);
-
-    var DOUBLE_LIMIT = 0x20000000000000; // 2^53
-    // we also check for equality since DOUBLE_LIMIT + 1 == DOUBLE_LIMIT
-    if (offset <= -DOUBLE_LIMIT || offset >= DOUBLE_LIMIT) {
-      return -{{{ cDefine('EOVERFLOW') }}};
-    }
-
-    FS.llseek(stream, offset, whence);
-    {{{ makeSetValue('result', '0', 'stream.position', 'i64') }}};
-    if (stream.getdents && offset === 0 && whence === {{{ cDefine('SEEK_SET') }}}) stream.getdents = null; // reset readdir state
-#else
-#if ASSERTIONS
-    abort('it should not be possible to operate on streams when !SYSCALLS_REQUIRE_FILESYSTEM');
-#endif
-#endif
     return 0;
   },
   __syscall142: function(which, varargs) { // newselect
@@ -916,12 +855,8 @@ var SyscallsLibrary = {
     var addr = SYSCALLS.get(), len = SYSCALLS.get(), flags = SYSCALLS.get();
     var info = SYSCALLS.mappings[addr];
     if (!info) return 0;
-    SYSCALLS.doMsync(addr, FS.getStream(info.fd), len, info.flags);
+    SYSCALLS.doMsync(addr, FS.getStream(info.fd), len, info.flags, 0);
     return 0;
-  },
-  __syscall145: function(which, varargs) { // readv
-    var stream = SYSCALLS.getStreamFromFD(), iov = SYSCALLS.get(), iovcnt = SYSCALLS.get();
-    return SYSCALLS.doReadv(stream, iov, iovcnt);
   },
   __syscall147__deps: ['$PROCINFO'],
   __syscall147: function(which, varargs) { // getsid
@@ -1460,18 +1395,109 @@ var SyscallsLibrary = {
     var stream = SYSCALLS.getStreamFromFD(fd);
     FS.close(stream);
 #else
+#if PROXY_POSIX_SOCKETS
+    // close() is a tricky function because it can be used to close both regular file descriptors
+    // and POSIX network socket handles, hence an implementation would need to track for each
+    // file descriptor which kind of item it is. To simplify, when using PROXY_POSIX_SOCKETS
+    // option, use shutdown() to close a socket, and this function should behave like a no-op.
+    warnOnce('To close sockets with PROXY_POSIX_SOCKETS bridge, prefer to use the function shutdown() that is proxied, instead of close()')
+#else
+#if ASSERTIONS
+    abort('it should not be possible to operate on streams when !SYSCALLS_REQUIRE_FILESYSTEM');
+#endif
+#endif
+#endif
+    return 0;
+  },
+  fd_read: function(fd, iov, iovcnt, pnum) {
+    var stream = SYSCALLS.getStreamFromFD(fd);
+    var num = SYSCALLS.doReadv(stream, iov, iovcnt);
+    {{{ makeSetValue('pnum', 0, 'num', 'i32') }}}
+    return 0;
+  },
+  fd_seek: function(fd, offset_low, offset_high, whence, newOffset) {
+#if SYSCALLS_REQUIRE_FILESYSTEM
+    var stream = SYSCALLS.getStreamFromFD(fd);
+    var HIGH_OFFSET = 0x100000000; // 2^32
+    // use an unsigned operator on low and shift high by 32-bits
+    var offset = offset_high * HIGH_OFFSET + (offset_low >>> 0);
+
+    var DOUBLE_LIMIT = 0x20000000000000; // 2^53
+    // we also check for equality since DOUBLE_LIMIT + 1 == DOUBLE_LIMIT
+    if (offset <= -DOUBLE_LIMIT || offset >= DOUBLE_LIMIT) {
+      return -{{{ cDefine('EOVERFLOW') }}};
+    }
+
+    FS.llseek(stream, offset, whence);
+    {{{ makeSetValue('newOffset', '0', 'stream.position', 'i64') }}};
+    if (stream.getdents && offset === 0 && whence === {{{ cDefine('SEEK_SET') }}}) stream.getdents = null; // reset readdir state
+#else
 #if ASSERTIONS
     abort('it should not be possible to operate on streams when !SYSCALLS_REQUIRE_FILESYSTEM');
 #endif
 #endif
     return 0;
   },
-  // Fallbacks for cases where the wasi_unstable.name prefixing fails,
-  // and we have the full name from C. This happens in fastcomp (which
-  // lacks the attribute to set the import module and base names) and
-  // in LTO mode (as bitcode does not preserve them).
-  __wasi_fd_write: 'fd_write',
-  __wasi_fd_close: 'fd_close',
+  fd_fdstat_get: function(fd, pbuf) {
+    var stream = SYSCALLS.getStreamFromFD(fd);
+    // All character devices are terminals (other things a Linux system would
+    // assume is a character device, like the mouse, we have special APIs for).
+    var type = stream.tty ? {{{ cDefine('__WASI_FILETYPE_CHARACTER_DEVICE') }}} :
+               FS.isDir(stream.mode) ? {{{ cDefine('__WASI_FILETYPE_DIRECTORY') }}} :
+               FS.isLink(stream.mode) ? {{{ cDefine('__WASI_FILETYPE_SYMBOLIC_LINK') }}} :
+               {{{ cDefine('__WASI_FILETYPE_REGULAR_FILE') }}};
+    {{{ makeSetValue('pbuf', C_STRUCTS.__wasi_fdstat_t.fs_filetype, 'type', 'i8') }}};
+    // TODO {{{ makeSetValue('pbuf', C_STRUCTS.__wasi_fdstat_t.fs_flags, '?', 'i16') }}};
+    // TODO {{{ makeSetValue('pbuf', C_STRUCTS.__wasi_fdstat_t.fs_rights_base, '?', 'i64') }}};
+    // TODO {{{ makeSetValue('pbuf', C_STRUCTS.__wasi_fdstat_t.fs_rights_inheriting, '?', 'i64') }}};
+    return 0;
+  },
+#if EMTERPRETIFY_ASYNC
+  fd_sync__deps: ['$EmterpreterAsync'],
+#endif
+  fd_sync: function(fd) {
+    var stream = SYSCALLS.getStreamFromFD(fd);
+#if EMTERPRETIFY_ASYNC
+    return EmterpreterAsync.handle(function(resume) {
+      var mount = stream.node.mount;
+      if (!mount.type.syncfs) {
+        // We write directly to the file system, so there's nothing to do here.
+        resume(function() { return 0 });
+        return;
+      }
+      mount.type.syncfs(mount, false, function(err) {
+        if (err) {
+          resume(function() { return {{{ cDefine('EIO') }}} });
+          return;
+        }
+        resume(function() { return 0 });
+      });
+    });
+#else
+#if WASM_BACKEND && ASYNCIFY
+    return Asyncify.handleSleep(function(wakeUp) {
+      var mount = stream.node.mount;
+      if (!mount.type.syncfs) {
+        // We write directly to the file system, so there's nothing to do here.
+        wakeUp(0);
+        return;
+      }
+      mount.type.syncfs(mount, false, function(err) {
+        if (err) {
+          wakeUp(function() { return {{{ cDefine('EIO') }}} });
+          return;
+        }
+        wakeUp(0);
+      });
+    });
+#else
+    if (stream.stream_ops && stream.stream_ops.fsync) {
+      return -stream.stream_ops.fsync(stream);
+    }
+    return 0; // we can't do anything synchronously; the in-memory FS is already synced to
+#endif // WASM_BACKEND && ASYNCIFY
+#endif // EMTERPRETIFY_ASYNC
+  },
 };
 
 if (SYSCALL_DEBUG) {
@@ -1830,7 +1856,20 @@ if (SYSCALL_DEBUG) {
 var WASI_SYSCALLS = set([
   'fd_write',
   'fd_close',
+  'fd_read',
+  'fd_seek',
+  'fd_fdstat_get',
+  'fd_sync',
 ]);
+
+// Fallback for cases where the wasi_interface_version.name prefixing fails,
+// and we have the full name from C. This happens in fastcomp which
+// lacks the attribute to set the import module and base names.
+if (!WASM_BACKEND) {
+  for (var x in WASI_SYSCALLS) {
+    SyscallsLibrary['__wasi_' + x] = x;
+  }
+}
 
 for (var x in SyscallsLibrary) {
   var which = null; // if this is a musl syscall, its number

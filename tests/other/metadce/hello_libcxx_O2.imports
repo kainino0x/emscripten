@@ -1,7 +1,5 @@
 __lock
 __map_file
-__syscall140
-__syscall145
 __syscall91
 __unlock
 abort
@@ -10,6 +8,8 @@ emscripten_resize_heap
 environ_get
 environ_sizes_get
 fd_close
+fd_read
+fd_seek
 fd_write
 memory
 setTempRet0
