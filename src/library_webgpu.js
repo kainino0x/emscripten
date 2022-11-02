@@ -29,6 +29,10 @@
       return mgr + ' = ' + mgr + ' || new Manager();';
     },
 
+    useSharedManager: function(type) {
+      return 'WebGPU.mgr' + type + ' = sharedManager;';
+    },
+
     makeReferenceRelease: function(type) {
       var s = '';
       s += 'wgpu' + type + 'Reference: function(id) {\n';
@@ -202,34 +206,54 @@ var LibraryWebGPU = {
         };
       }
 
+      /** @constructor */
+      function SharedManager() {
+        var table = new GPUSharedTable();
+
+        this.create = function(object) {
+          return table.insert(object);
+        };
+        this.get = function(id) {
+          if (!id) return undefined;
+          return table.get(id);
+        };
+        this.reference = function(id) {
+          table.insert(table.get(id));
+        };
+        this.release = function(id) {
+          table.remove(id);
+        };
+      }
+      var sharedManager = new SharedManager();
+
       {{{ gpu.makeInitManager('Surface') }}}
       {{{ gpu.makeInitManager('SwapChain') }}}
 
       {{{ gpu.makeInitManager('Adapter') }}}
       // TODO: Release() the device's default queue when the device is freed.
-      {{{ gpu.makeInitManager('Device') }}}
+      {{{ gpu.useSharedManager('Device') }}}
       {{{ gpu.makeInitManager('Queue') }}}
 
-      {{{ gpu.makeInitManager('CommandBuffer') }}}
+      {{{ gpu.useSharedManager('CommandBuffer') }}}
       {{{ gpu.makeInitManager('CommandEncoder') }}}
       {{{ gpu.makeInitManager('RenderPassEncoder') }}}
       {{{ gpu.makeInitManager('ComputePassEncoder') }}}
 
-      {{{ gpu.makeInitManager('BindGroup') }}}
-      {{{ gpu.makeInitManager('Buffer') }}}
+      {{{ gpu.useSharedManager('BindGroup') }}}
+      {{{ gpu.useSharedManager('Buffer') }}}
       {{{ gpu.makeInitManager('Sampler') }}}
       {{{ gpu.makeInitManager('Texture') }}}
-      {{{ gpu.makeInitManager('TextureView') }}}
+      {{{ gpu.useSharedManager('TextureView') }}}
       {{{ gpu.makeInitManager('QuerySet') }}}
 
       {{{ gpu.makeInitManager('BindGroupLayout') }}}
       {{{ gpu.makeInitManager('PipelineLayout') }}}
-      {{{ gpu.makeInitManager('RenderPipeline') }}}
-      {{{ gpu.makeInitManager('ComputePipeline') }}}
+      {{{ gpu.useSharedManager('RenderPipeline') }}}
+      {{{ gpu.useSharedManager('ComputePipeline') }}}
       {{{ gpu.makeInitManager('ShaderModule') }}}
 
       {{{ gpu.makeInitManager('RenderBundleEncoder') }}}
-      {{{ gpu.makeInitManager('RenderBundle') }}}
+      {{{ gpu.useSharedManager('RenderBundle') }}}
     },
 
     makeColor: function(ptr) {
@@ -693,7 +717,7 @@ var LibraryWebGPU = {
   wgpuDeviceDestroy: function(deviceId) { WebGPU.mgrDevice.get(deviceId)["destroy"](); },
 
   wgpuDeviceGetLimits: function(deviceId, limitsOutPtr) {
-    var device = WebGPU.mgrDevice.objects[deviceId].object;
+    var device = WebGPU.mgrDevice.get(deviceId);
     var limitsPtr = {{{ C_STRUCTS.WGPUSupportedLimits.limits }}};
     function setLimitValueU32(name, limitOffset) {
       var limitValue = device.limits[name];
@@ -737,7 +761,7 @@ var LibraryWebGPU = {
   },
 
   wgpuDeviceGetQueue: function(deviceId) {
-    var queueId = WebGPU.mgrDevice.objects[deviceId].queueId;
+    var queueId = WebGPU.mgrDevice.get(deviceId)._emscripten_queueId;
 #if ASSERTIONS
     assert(queueId, 'wgpuDeviceGetQueue: queue was missing or null');
 #endif
@@ -798,15 +822,14 @@ var LibraryWebGPU = {
 
   wgpuDeviceSetDeviceLostCallback__deps: ['$callUserCallback', '$allocateUTF8'],
   wgpuDeviceSetDeviceLostCallback: function(deviceId, callback, userdata) {
-    var deviceWrapper = WebGPU.mgrDevice.objects[deviceId];
-    {{{ gpu.makeCheckDefined('deviceWrapper') }}}
-    if (!deviceWrapper.lostCallback) {
+    var device = WebGPU.mgrDevice.get(deviceId);
+    if (!device._emscripten_lostCallback) {
       // device.lost hasn't been registered yet - register it.
-      deviceWrapper.object["lost"].then(function(info) {
-        deviceWrapper.lostCallback(info);
+      device["lost"].then(function(info) {
+        device._emscripten_lostCallback(info);
       });
     }
-    deviceWrapper.lostCallback = function(info) {
+    device._emscripten_lostCallback = function(info) {
       // This will skip the callback if the runtime is no longer alive.
       callUserCallback(function() {
         var messagePtr = allocateUTF8(info.message);
@@ -871,11 +894,11 @@ var LibraryWebGPU = {
     if (labelPtr) desc["label"] = UTF8ToString(labelPtr);
 
     var device = WebGPU.mgrDevice.get(deviceId);
-    var bufferWrapper = {};
-    var id = WebGPU.mgrBuffer.create(device["createBuffer"](desc), bufferWrapper);
+    var buffer = device["createBuffer"](desc);
+    var id = WebGPU.mgrBuffer.create(buffer);
     if (mappedAtCreation) {
-      bufferWrapper.mapMode = {{{ gpu.MapMode.Write }}};
-      bufferWrapper.onUnmap = [];
+      buffer._emscripten_mapMode = {{{ gpu.MapMode.Write }}};
+      buffer._emscripten_onUnmap = [];
     }
     return id;
   },
@@ -1850,8 +1873,7 @@ var LibraryWebGPU = {
   // And library_webgpu assumes that size_t is always 32bit in emscripten.
   wgpuBufferGetConstMappedRange__deps: ['$warnOnce'],
   wgpuBufferGetConstMappedRange: function(bufferId, offset, size) {
-    var bufferWrapper = WebGPU.mgrBuffer.objects[bufferId];
-    {{{ gpu.makeCheckDefined('bufferWrapper') }}}
+    var buffer = WebGPU.mgrBuffer.get(bufferId);
 
     if (size === 0) warnOnce('getMappedRange size=0 no longer means WGPU_WHOLE_MAP_SIZE');
 
@@ -1860,7 +1882,7 @@ var LibraryWebGPU = {
 
     var mapped;
     try {
-      mapped = bufferWrapper.object["getMappedRange"](offset, size);
+      mapped = buffer["getMappedRange"](offset, size);
     } catch (ex) {
 #if ASSERTIONS
       err("wgpuBufferGetConstMappedRange(" + offset + ", " + size + ") failed: " + ex);
@@ -1871,7 +1893,7 @@ var LibraryWebGPU = {
 
     var data = _malloc(mapped.byteLength);
     HEAPU8.set(new Uint8Array(mapped), data);
-    bufferWrapper.onUnmap.push(function() {
+    buffer._emscripten_onUnmap.push(function() {
       _free(data);
     });
     return data;
@@ -1881,15 +1903,14 @@ var LibraryWebGPU = {
   // And library_webgpu assumes that size_t is always 32bit in emscripten.
   wgpuBufferGetMappedRange__deps: ['$warnOnce'],
   wgpuBufferGetMappedRange: function(bufferId, offset, size) {
-    var bufferWrapper = WebGPU.mgrBuffer.objects[bufferId];
-    {{{ gpu.makeCheckDefined('bufferWrapper') }}}
+    var buffer = WebGPU.mgrBuffer.get(bufferId);
 
     if (size === 0) warnOnce('getMappedRange size=0 no longer means WGPU_WHOLE_MAP_SIZE');
 
     size = size >>> 0;
     if (size === {{{ gpu.WHOLE_MAP_SIZE }}}) size = undefined;
 
-    if (bufferWrapper.mapMode !== {{{ gpu.MapMode.Write }}}) {
+    if (buffer._emscripten_mapMode !== {{{ gpu.MapMode.Write }}}) {
 #if ASSERTIONS
       abort("GetMappedRange called, but buffer not mapped for writing");
 #endif
@@ -1899,7 +1920,7 @@ var LibraryWebGPU = {
 
     var mapped;
     try {
-      mapped = bufferWrapper.object["getMappedRange"](offset, size);
+      mapped = buffer["getMappedRange"](offset, size);
     } catch (ex) {
 #if ASSERTIONS
       err("wgpuBufferGetMappedRange(" + offset + ", " + size + ") failed: " + ex);
@@ -1910,7 +1931,7 @@ var LibraryWebGPU = {
 
     var data = _malloc(mapped.byteLength);
     HEAPU8.fill(0, data, mapped.byteLength);
-    bufferWrapper.onUnmap.push(function() {
+    buffer._emscripten_onUnmap.push(function() {
       new Uint8Array(mapped).set(HEAPU8.subarray(data, data + mapped.byteLength));
       _free(data);
     });
@@ -1921,11 +1942,9 @@ var LibraryWebGPU = {
   // And library_webgpu assumes that size_t is always 32bit in emscripten.
   wgpuBufferMapAsync__deps: ['$callUserCallback'],
   wgpuBufferMapAsync: function(bufferId, mode, offset, size, callback, userdata) {
-    var bufferWrapper = WebGPU.mgrBuffer.objects[bufferId];
-    {{{ gpu.makeCheckDefined('bufferWrapper') }}}
-    bufferWrapper.mapMode = mode;
-    bufferWrapper.onUnmap = [];
-    var buffer = bufferWrapper.object;
+    var buffer = WebGPU.mgrBuffer.get(bufferId);
+    buffer._emscripten_mapMode = mode;
+    buffer._emscripten_onUnmap = [];
 
     size = size >>> 0;
     if (size === {{{ gpu.WHOLE_MAP_SIZE }}}) size = undefined;
@@ -1964,20 +1983,19 @@ var LibraryWebGPU = {
   },
 
   wgpuBufferUnmap: function(bufferId) {
-    var bufferWrapper = WebGPU.mgrBuffer.objects[bufferId];
-    {{{ gpu.makeCheckDefined('bufferWrapper') }}}
+    var buffer = WebGPU.mgrBuffer.get(bufferId);
 
-    if (!bufferWrapper.onUnmap) {
+    if (!buffer._emscripten_onUnmap) {
       // Already unmapped
       return;
     }
 
-    for (var i = 0; i < bufferWrapper.onUnmap.length; ++i) {
-      bufferWrapper.onUnmap[i]();
+    for (var i = 0; i < buffer._emscripten_onUnmap.length; ++i) {
+      buffer._emscripten_onUnmap[i]();
     }
-    bufferWrapper.onUnmap = undefined;
+    buffer._emscripten_onUnmap = undefined;
 
-    bufferWrapper.object["unmap"]();
+    buffer["unmap"]();
   },
 
   // wgpuTexture
@@ -2590,8 +2608,8 @@ var LibraryWebGPU = {
     adapter["requestDevice"](desc).then(function(device) {
       {{{ runtimeKeepalivePop() }}}
       callUserCallback(function() {
-        var deviceWrapper = { queueId: WebGPU.mgrQueue.create(device["queue"]) };
-        var deviceId = WebGPU.mgrDevice.create(device, deviceWrapper);
+        device._emscripten_queueId = WebGPU.mgrQueue.create(device["queue"]);
+        var deviceId = WebGPU.mgrDevice.create(device);
         {{{ makeDynCall('viiii', 'callback') }}}({{{ gpu.RequestDeviceStatus.Success }}}, deviceId, 0, userdata);
       });
     }, function(ex) {
