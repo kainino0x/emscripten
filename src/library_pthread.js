@@ -217,6 +217,12 @@ var LibraryPThread = {
         }
       }
 #endif
+#if USE_WEBGPU
+#if ASSERTIONS
+      assert(!WebGPU.sharedTable, 'WebGPU.sharedTable should not have been initialized yet');
+#endif
+      WebGPU.sharedTable = data.gpuSharedTable;
+#endif
     },
     // Called by worker.js each time a thread is started.
     threadInitTLS: function() {
@@ -560,6 +566,9 @@ var LibraryPThread = {
     msg.moduleCanvasId = threadParams.moduleCanvasId;
     msg.offscreenCanvases = threadParams.offscreenCanvases;
 #endif
+#if USE_WEBGPU
+    msg.gpuSharedTable = threadParams.gpuSharedTable;
+#endif
     worker.runPthread = () => {
       // Ask the worker to start executing its pthread entry point function.
       msg.time = performance.now();
@@ -754,6 +763,9 @@ var LibraryPThread = {
 #if OFFSCREENCANVAS_SUPPORT
       moduleCanvasId,
       offscreenCanvases,
+#endif
+#if USE_WEBGPU
+      gpuSharedTable: WebGPU.getSharedTable(),
 #endif
       transferList,
     };

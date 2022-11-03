@@ -167,6 +167,15 @@
 var LibraryWebGPU = {
   $WebGPU__postset: 'WebGPU.initManagers();',
   $WebGPU: {
+    // Lazy-initialize the GPUSharedTable to make sure that if thread initialization receives a
+    // GPUSharedTable, we use it instead of a new one. This is probably fast, but could maybe be
+    // optimized by initializing the main thread's GPUSharedTable somewhere in Emscripten's main
+    // thread setup code (to parallel the init in the worker thread setup code).
+    getSharedTable: function() {
+      if (this.sharedTable) return this.sharedTable;
+      this.sharedTable = new GPUSharedTable();
+      return this.sharedTable;
+    },
     initManagers: function() {
       if (WebGPU.mgrDevice) return;
 
@@ -208,20 +217,19 @@ var LibraryWebGPU = {
 
       /** @constructor */
       function SharedManager() {
-        var table = new GPUSharedTable();
-
         this.create = function(object) {
-          return table.insert(object);
+          return WebGPU.getSharedTable().insert(object);
         };
         this.get = function(id) {
           if (!id) return undefined;
-          return table.get(id);
+          return WebGPU.getSharedTable().get(id);
         };
         this.reference = function(id) {
-          table.insert(table.get(id));
+          // Kinda silly, could optimize by adding reference() to GPUSharedTable
+          WebGPU.getSharedTable().insert(WebGPU.getSharedTable().get(id));
         };
         this.release = function(id) {
-          table.remove(id);
+          WebGPU.getSharedTable().remove(id);
         };
       }
       var sharedManager = new SharedManager();
