@@ -225,11 +225,10 @@ var LibraryWebGPU = {
           return WebGPU.getSharedTable().get(id);
         };
         this.reference = function(id) {
-          // Kinda silly, could optimize by adding reference() to GPUSharedTable
-          WebGPU.getSharedTable().insert(WebGPU.getSharedTable().get(id));
+          WebGPU.getSharedTable().reference(id);
         };
         this.release = function(id) {
-          WebGPU.getSharedTable().remove(id);
+          WebGPU.getSharedTable().release(id);
         };
       }
       var sharedManager = new SharedManager();
