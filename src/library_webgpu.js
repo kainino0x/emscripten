@@ -768,10 +768,12 @@ var LibraryWebGPU = {
   },
 
   wgpuDeviceGetQueue: function(deviceId) {
-    var queueId = WebGPU.mgrDevice.get(deviceId)._emscripten_queueId;
-#if ASSERTIONS
-    assert(queueId, 'wgpuDeviceGetQueue: queue was missing or null');
-#endif
+    var device = WebGPU.mgrDevice.get(deviceId)
+    // FIXME: Should get the same queue id on every thread, this will return a unique one per thread
+    var queueId = device._emscripten_queueId;
+    if (!queueId) {
+      queueId = device._emscripten_queueId = WebGPU.mgrQueue.create(device["queue"]);
+    }
     // Returns a new reference to the existing queue.
     WebGPU.mgrQueue.reference(queueId);
     return queueId;
@@ -2615,7 +2617,6 @@ var LibraryWebGPU = {
     adapter["requestDevice"](desc).then(function(device) {
       {{{ runtimeKeepalivePop() }}}
       callUserCallback(function() {
-        device._emscripten_queueId = WebGPU.mgrQueue.create(device["queue"]);
         var deviceId = WebGPU.mgrDevice.create(device);
         {{{ makeDynCall('viiii', 'callback') }}}({{{ gpu.RequestDeviceStatus.Success }}}, deviceId, 0, userdata);
       });
