@@ -239,7 +239,6 @@ var LibraryWebGPU = {
       {{{ gpu.makeInitManager('Adapter') }}}
       // TODO: Release() the device's default queue when the device is freed.
       {{{ gpu.useSharedManager('Device') }}}
-      {{{ gpu.makeInitManager('Queue') }}}
 
       {{{ gpu.useSharedManager('CommandBuffer') }}}
       {{{ gpu.makeInitManager('CommandEncoder') }}}
@@ -677,7 +676,6 @@ var LibraryWebGPU = {
 
   {{{ gpu.makeReferenceRelease('Adapter') }}}
   {{{ gpu.makeReferenceRelease('Device') }}}
-  {{{ gpu.makeReferenceRelease('Queue') }}}
 
   {{{ gpu.makeReferenceRelease('CommandBuffer') }}}
   {{{ gpu.makeReferenceRelease('CommandEncoder') }}}
@@ -699,6 +697,10 @@ var LibraryWebGPU = {
 
   {{{ gpu.makeReferenceRelease('RenderBundleEncoder') }}}
   {{{ gpu.makeReferenceRelease('RenderBundle') }}}
+
+  // FIXME: single-queue hack
+  wgpuQueueReference: function(id) {},
+  wgpuQueueRelease: function(id) {},
 
   // *Destroy
 
@@ -768,15 +770,11 @@ var LibraryWebGPU = {
   },
 
   wgpuDeviceGetQueue: function(deviceId) {
-    var device = WebGPU.mgrDevice.get(deviceId)
-    // FIXME: Should get the same queue id on every thread, this will return a unique one per thread
-    var queueId = device._emscripten_queueId;
-    if (!queueId) {
-      queueId = device._emscripten_queueId = WebGPU.mgrQueue.create(device["queue"]);
-    }
-    // Returns a new reference to the existing queue.
-    WebGPU.mgrQueue.reference(queueId);
-    return queueId;
+    // FIXME: single-queue hack
+    // This is a big hack that relies on the fact that there's only one queue per device.
+    // It has a weird effect on memory management because queues are no longer refcounted, they just
+    // have the same lifetime as the device. But this probably won't break anything.
+    return deviceId;
   },
 
   wgpuDeviceHasFeature: function(deviceId, featureEnumValue) {
@@ -1502,7 +1500,8 @@ var LibraryWebGPU = {
   // wgpuQueue
 
   wgpuQueueSetLabel: function(queueId, labelPtr) {
-    var queue = WebGPU.mgrQueue.get(queueId);
+    // FIXME: single-queue hack
+    var queue = WebGPU.mgrDevice.get(queueId).queue;
     queue.label = UTF8ToString(labelPtr);
   },
 
@@ -1510,7 +1509,8 @@ var LibraryWebGPU = {
 #if ASSERTIONS
     assert(commands % 4 === 0);
 #endif
-    var queue = WebGPU.mgrQueue.get(queueId);
+    // FIXME: single-queue hack
+    var queue = WebGPU.mgrDevice.get(queueId).queue;
     var cmds = Array.from(HEAP32.subarray(commands >> 2, (commands >> 2) + commandCount),
       function(id) { return WebGPU.mgrCommandBuffer.get(id); });
     queue["submit"](cmds);
@@ -1518,7 +1518,8 @@ var LibraryWebGPU = {
 
   wgpuQueueOnSubmittedWorkDone__deps: ['$callUserCallback'],
   wgpuQueueOnSubmittedWorkDone: function(queueId, {{{ defineI64Param('signalValue') }}}, callback, userdata) {
-    var queue = WebGPU.mgrQueue.get(queueId);
+    // FIXME: single-queue hack
+    var queue = WebGPU.mgrDevice.get(queueId).queue;
 #if ASSERTIONS
     assert(signalValue_low === 0 && signalValue_high === 0, 'signalValue not supported, must be 0');
 #endif
@@ -1541,7 +1542,8 @@ var LibraryWebGPU = {
       bufferId, {{{ defineI64Param('bufferOffset') }}}, data, size) {
     {{{ receiveI64ParamAsI32s('bufferOffset') }}}
 
-    var queue = WebGPU.mgrQueue.get(queueId);
+    // FIXME: single-queue hack
+    var queue = WebGPU.mgrDevice.get(queueId).queue;
     var buffer = WebGPU.mgrBuffer.get(bufferId);
     var bufferOffset = {{{ gpu.makeI32I32ToU53('bufferOffset_low', 'bufferOffset_high') }}};
     // There is a size limitation for ArrayBufferView. Work around by passing in a subarray
@@ -1552,7 +1554,8 @@ var LibraryWebGPU = {
 
   wgpuQueueWriteTexture: function(queueId,
       destinationPtr, data, dataSize, dataLayoutPtr, writeSizePtr) {
-    var queue = WebGPU.mgrQueue.get(queueId);
+    // FIXME: single-queue hack
+    var queue = WebGPU.mgrDevice.get(queueId).queue;
 
     var destination = WebGPU.makeImageCopyTexture(destinationPtr);
     var dataLayout = WebGPU.makeTextureDataLayout(dataLayoutPtr);
