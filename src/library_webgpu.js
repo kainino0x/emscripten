@@ -241,7 +241,7 @@ var LibraryWebGPU = {
       {{{ gpu.useSharedManager('Device') }}}
 
       {{{ gpu.useSharedManager('CommandBuffer') }}}
-      {{{ gpu.makeInitManager('CommandEncoder') }}}
+      {{{ gpu.useSharedManager('CommandEncoder') }}}
       {{{ gpu.makeInitManager('RenderPassEncoder') }}}
       {{{ gpu.makeInitManager('ComputePassEncoder') }}}
 
