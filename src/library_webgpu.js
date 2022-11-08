@@ -248,7 +248,7 @@ var LibraryWebGPU = {
       {{{ gpu.useSharedManager('BindGroup') }}}
       {{{ gpu.useSharedManager('Buffer') }}}
       {{{ gpu.makeInitManager('Sampler') }}}
-      {{{ gpu.makeInitManager('Texture') }}}
+      {{{ gpu.useSharedManager('Texture') }}}
       {{{ gpu.useSharedManager('TextureView') }}}
       {{{ gpu.makeInitManager('QuerySet') }}}
 
