@@ -886,28 +886,20 @@ var LibraryWebGPU = {
     return WebGPU.mgrCommandEncoder.create(device["createCommandEncoder"](desc));
   },
 
-  wgpuDeviceCreateBuffer: function(deviceId, descriptor) {
+  js_wgpuDeviceCreateBuffer: function(deviceId, descriptor) {
     {{{ gpu.makeCheckDescriptor('descriptor') }}}
-
-    var mappedAtCreation = {{{ gpu.makeGetBool('descriptor', C_STRUCTS.WGPUBufferDescriptor.mappedAtCreation) }}};
 
     var desc = {
       "label": undefined,
       "usage": {{{ gpu.makeGetU32('descriptor', C_STRUCTS.WGPUBufferDescriptor.usage) }}},
       "size": {{{ gpu.makeGetU64('descriptor', C_STRUCTS.WGPUBufferDescriptor.size) }}},
-      "mappedAtCreation": mappedAtCreation,
+      "mappedAtCreation": {{{ gpu.makeGetBool('descriptor', C_STRUCTS.WGPUBufferDescriptor.mappedAtCreation) }}},
     };
     var labelPtr = {{{ makeGetValue('descriptor', C_STRUCTS.WGPUBufferDescriptor.label, '*') }}};
     if (labelPtr) desc["label"] = UTF8ToString(labelPtr);
 
     var device = WebGPU.mgrDevice.get(deviceId);
-    var buffer = device["createBuffer"](desc);
-    var id = WebGPU.mgrBuffer.create(buffer);
-    if (mappedAtCreation) {
-      buffer._emscripten_mapMode = {{{ gpu.MapMode.Write }}};
-      buffer._emscripten_onUnmap = [];
-    }
-    return id;
+    return WebGPU.mgrBuffer.create(device["createBuffer"](desc));
   },
 
   wgpuDeviceCreateTexture: function(deviceId, descriptor) {
@@ -1881,90 +1873,16 @@ var LibraryWebGPU = {
 
   // wgpuBuffer
 
-  // In webgpu.h offset and size are passed in as size_t.
-  // And library_webgpu assumes that size_t is always 32bit in emscripten.
-  wgpuBufferGetConstMappedRange__deps: ['$warnOnce'],
-  wgpuBufferGetConstMappedRange: function(bufferId, offset, size) {
+  // Offset and size are passed as size_t, we assume here that size_t is 32-bit.
+  js_readBuffer__deps: ['$callUserCallback'],
+  js_readBuffer: function(bufferId, offset, size, outData, callback, userdata) {
     var buffer = WebGPU.mgrBuffer.get(bufferId);
-
-    if (size === 0) warnOnce('getMappedRange size=0 no longer means WGPU_WHOLE_MAP_SIZE');
-
-    size = size >>> 0;
-    if (size === {{{ gpu.WHOLE_MAP_SIZE }}}) size = undefined;
-
-    var mapped;
-    try {
-      mapped = buffer["getMappedRange"](offset, size);
-    } catch (ex) {
-#if ASSERTIONS
-      err("wgpuBufferGetConstMappedRange(" + offset + ", " + size + ") failed: " + ex);
-#endif
-      // TODO(kainino0x): Somehow inject a validation error?
-      return 0;
-    }
-
-    var data = _malloc(mapped.byteLength);
-    HEAPU8.set(new Uint8Array(mapped), data);
-    buffer._emscripten_onUnmap.push(function() {
-      _free(data);
-    });
-    return data;
-  },
-
-  // In webgpu.h offset and size are passed in as size_t.
-  // And library_webgpu assumes that size_t is always 32bit in emscripten.
-  wgpuBufferGetMappedRange__deps: ['$warnOnce'],
-  wgpuBufferGetMappedRange: function(bufferId, offset, size) {
-    var buffer = WebGPU.mgrBuffer.get(bufferId);
-
-    if (size === 0) warnOnce('getMappedRange size=0 no longer means WGPU_WHOLE_MAP_SIZE');
-
-    size = size >>> 0;
-    if (size === {{{ gpu.WHOLE_MAP_SIZE }}}) size = undefined;
-
-    if (buffer._emscripten_mapMode !== {{{ gpu.MapMode.Write }}}) {
-#if ASSERTIONS
-      abort("GetMappedRange called, but buffer not mapped for writing");
-#endif
-      // TODO(kainino0x): Somehow inject a validation error?
-      return 0;
-    }
-
-    var mapped;
-    try {
-      mapped = buffer["getMappedRange"](offset, size);
-    } catch (ex) {
-#if ASSERTIONS
-      err("wgpuBufferGetMappedRange(" + offset + ", " + size + ") failed: " + ex);
-#endif
-      // TODO(kainino0x): Somehow inject a validation error?
-      return 0;
-    }
-
-    var data = _malloc(mapped.byteLength);
-    HEAPU8.fill(0, data, mapped.byteLength);
-    buffer._emscripten_onUnmap.push(function() {
-      new Uint8Array(mapped).set(HEAPU8.subarray(data, data + mapped.byteLength));
-      _free(data);
-    });
-    return data;
-  },
-
-  // In webgpu.h offset and size are passed in as size_t.
-  // And library_webgpu assumes that size_t is always 32bit in emscripten.
-  wgpuBufferMapAsync__deps: ['$callUserCallback'],
-  wgpuBufferMapAsync: function(bufferId, mode, offset, size, callback, userdata) {
-    var buffer = WebGPU.mgrBuffer.get(bufferId);
-    buffer._emscripten_mapMode = mode;
-    buffer._emscripten_onUnmap = [];
-
-    size = size >>> 0;
-    if (size === {{{ gpu.WHOLE_MAP_SIZE }}}) size = undefined;
-
-    // `callback` takes (WGPUBufferMapAsyncStatus status, void * userdata)
 
     {{{ runtimeKeepalivePush() }}}
-    buffer["mapAsync"](mode, offset, size).then(function() {
+    buffer["mapAsync"](GPUMapMode.READ, offset, size).then(function() {
+      var data = buffer["getMappedRange"]();
+      HEAPU8.set(new Uint8Array(data), outData);
+      buffer["unmap"]();
       {{{ runtimeKeepalivePop() }}}
       callUserCallback(function() {
         {{{ makeDynCall('vii', 'callback') }}}({{{ gpu.BufferMapAsyncStatus.Success }}}, userdata);
@@ -1976,6 +1894,7 @@ var LibraryWebGPU = {
         {{{ makeDynCall('vii', 'callback') }}}({{{ gpu.BufferMapAsyncStatus.Error }}}, userdata);
       });
     });
+
   },
 
   wgpuBufferGetSize: function(bufferId) {
@@ -1992,22 +1911,6 @@ var LibraryWebGPU = {
   wgpuBufferSetLabel: function(bufferId, labelPtr) {
     var buffer = WebGPU.mgrBuffer.get(bufferId);
     buffer.label = UTF8ToString(labelPtr);
-  },
-
-  wgpuBufferUnmap: function(bufferId) {
-    var buffer = WebGPU.mgrBuffer.get(bufferId);
-
-    if (!buffer._emscripten_onUnmap) {
-      // Already unmapped
-      return;
-    }
-
-    for (var i = 0; i < buffer._emscripten_onUnmap.length; ++i) {
-      buffer._emscripten_onUnmap[i]();
-    }
-    buffer._emscripten_onUnmap = undefined;
-
-    buffer["unmap"]();
   },
 
   // wgpuTexture

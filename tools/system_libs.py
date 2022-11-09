@@ -1627,12 +1627,12 @@ class libGL(MTLibrary):
     )
 
 
-class libwebgpu_cpp(MTLibrary):
-  name = 'libwebgpu_cpp'
+class libwebgpu(MTLibrary):
+  name = 'libwebgpu'
 
-  cflags = ['-std=c++11']
+  cflags = ['-std=c++11', '-fno-exceptions']
   src_dir = 'system/lib/webgpu'
-  src_files = ['webgpu_cpp.cpp']
+  src_files = ['webgpu.cpp', 'webgpu_cpp.cpp']
 
 
 class libembind(Library):
@@ -2105,7 +2105,7 @@ def get_libs_to_link(args, forced, only_forced):
     add_library('libsockets')
 
   if settings.USE_WEBGPU:
-    add_library('libwebgpu_cpp')
+    add_library('libwebgpu')
 
   if settings.WASM_WORKERS:
     add_library('libwasm_workers')
