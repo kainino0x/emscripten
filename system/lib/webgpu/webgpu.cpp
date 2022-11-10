@@ -41,7 +41,7 @@ struct BufferSidecar {
 // Fix by either doing the TODO above, or by cleaning it up on Release.
 static std::map<WGPUBuffer, std::unique_ptr<BufferSidecar>> bufferSidecars{};
 
-void implMap(BufferSidecar* sidecar, WGPUMapModeFlags mode, size_t offset, size_t size) {
+void impl_map(BufferSidecar* sidecar, WGPUMapModeFlags mode, size_t offset, size_t size) {
     if (size == static_cast<size_t>(WGPU_WHOLE_SIZE)) {
         assert(offset <= sidecar->size);
         size = sidecar->size - offset;
@@ -64,31 +64,30 @@ WGPUBuffer wgpuDeviceCreateBuffer(WGPUDevice device, WGPUBufferDescriptor const 
         desc.usage |= WGPUBufferUsage_CopyDst;
     }
 
-    BufferSidecar* sidecar = new BufferSidecar;
-    sidecar->queue = wgpuDeviceGetQueue(device);
-    sidecar->size = desc.size;
+    auto sidecar = std::make_unique<BufferSidecar>(BufferSidecar {
+        .queue = wgpuDeviceGetQueue(device),
+        .size = static_cast<size_t>(desc.size),
+    });
     if (desc.mappedAtCreation) {
-        implMap(sidecar, WGPUMapMode_Write, 0, static_cast<size_t>(WGPU_WHOLE_SIZE));
+        impl_map(sidecar.get(), WGPUMapMode_Write, 0, static_cast<size_t>(WGPU_WHOLE_SIZE));
         desc.mappedAtCreation = false;
     }
 
     WGPUBuffer buffer = js_wgpuDeviceCreateBuffer(device, &desc);
-    bufferSidecars[buffer] = std::unique_ptr<BufferSidecar>(sidecar);
+    bufferSidecars[buffer] = std::move(sidecar);
     return buffer;
 }
 
 void wgpuBufferMapAsync(WGPUBuffer buffer, WGPUMapModeFlags mode, size_t offset, size_t size, WGPUBufferMapCallback callback, void * userdata) {
     BufferSidecar* sidecar = bufferSidecars[buffer].get();
     assert(sidecar->currentMapMode == 0);
-    implMap(sidecar, mode, offset, size);
+    impl_map(sidecar, mode, offset, size);
 
     struct CallbackData {
         WGPUBufferMapCallback callback;
         void* userdata;
     };
-    CallbackData* cbdata = new CallbackData;
-    cbdata->callback = callback;
-    cbdata->userdata = userdata;
+    CallbackData* cbdata = new CallbackData{ .callback = callback, .userdata = userdata };
 
     if (mode == WGPUMapMode_Write) {
         emscripten_async_call([](void* vp_cbdata) {
@@ -114,14 +113,12 @@ void * impl_wgpuBufferGetMappedRange(BufferSidecar* sidecar, size_t offset, size
         size = sidecar->stage.size();
     }
     if (sidecar->currentMapMode & WGPUMapMode_Write) {
-        MappedRange range{};
-        range.offset = offset;
-        range.size = size;
-        sidecar->mappedRanges.push_back(std::move(range));
+        sidecar->mappedRanges.push_back(MappedRange { .offset = offset, .size = size });
     }
 
     assert(offset >= sidecar->currentMapOffset);
-    return &sidecar->stage[offset - sidecar->currentMapOffset];
+    size_t relativeOffset = offset - sidecar->currentMapOffset;
+    return sidecar->stage.data() + relativeOffset;
 }
 
 void * wgpuBufferGetMappedRange(WGPUBuffer buffer, size_t offset, size_t size) {
@@ -140,7 +137,7 @@ void wgpuBufferUnmap(WGPUBuffer buffer) {
     if (sidecar->currentMapMode & WGPUMapMode_Write) {
         for (const MappedRange& range : sidecar->mappedRanges) {
             size_t relativeOffset = range.offset - sidecar->currentMapOffset;
-            wgpuQueueWriteBuffer(sidecar->queue, buffer, range.offset, &sidecar->stage[relativeOffset], range.size);
+            wgpuQueueWriteBuffer(sidecar->queue, buffer, range.offset, sidecar->stage.data() + relativeOffset, range.size);
         }
     }
 
