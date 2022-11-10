@@ -12,6 +12,8 @@
 extern "C" {
 WGPU_EXPORT WGPUBuffer js_wgpuDeviceCreateBuffer(WGPUDevice device, WGPUBufferDescriptor const * descriptor);
 WGPU_EXPORT void js_readBuffer(WGPUBuffer buffer, size_t offset, size_t size, void * outData, WGPUBufferMapCallback callback, void * userdata);
+WGPU_EXPORT void js_wgpuBufferReference(WGPUBuffer buffer);
+WGPU_EXPORT void js_wgpuBufferRelease(WGPUBuffer buffer);
 }
 
 // C++ internals
@@ -22,8 +24,9 @@ struct MappedRange {
 };
 
 struct BufferSidecar {
-    WGPUQueue queue = nullptr;
-    size_t size = 0;
+    size_t refcount = 1;
+    WGPUQueue const queue = nullptr;
+    size_t const size = 0;
 
     WGPUMapModeFlags currentMapMode = WGPUMapMode_None;
     size_t currentMapOffset = 0;
@@ -37,8 +40,6 @@ struct BufferSidecar {
 // all the sidecar data in there, but doing so requires shimming every function
 // that takes a WGPUBuffer as an argument. This is a temporary workaround so
 // we don't have to do that.
-// FIXME: This map doesn't get cleaned up at all right now, so it leaks.
-// Fix by either doing the TODO above, or by cleaning it up on Release.
 static std::map<WGPUBuffer, std::unique_ptr<BufferSidecar>> bufferSidecars{};
 
 void impl_map(BufferSidecar* sidecar, WGPUMapModeFlags mode, size_t offset, size_t size) {
@@ -143,4 +144,19 @@ void wgpuBufferUnmap(WGPUBuffer buffer) {
 
     sidecar->currentMapMode = 0;
     sidecar->mappedRanges.clear(); // Frees all of the "stage" memory
+}
+
+void wgpuBufferReference(WGPUBuffer buffer) {
+    BufferSidecar* sidecar = bufferSidecars[buffer].get();
+    sidecar->refcount++;
+    js_wgpuBufferReference(buffer);
+}
+
+void wgpuBufferRelease(WGPUBuffer buffer) {
+    BufferSidecar* sidecar = bufferSidecars[buffer].get();
+    sidecar->refcount--;
+    if (sidecar->refcount == 0) {
+        bufferSidecars.erase(buffer);
+    }
+    js_wgpuBufferRelease(buffer);
 }

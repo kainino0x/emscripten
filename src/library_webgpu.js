@@ -683,7 +683,6 @@ var LibraryWebGPU = {
   {{{ gpu.makeReferenceRelease('ComputePassEncoder') }}}
 
   {{{ gpu.makeReferenceRelease('BindGroup') }}}
-  {{{ gpu.makeReferenceRelease('Buffer') }}}
   {{{ gpu.makeReferenceRelease('Sampler') }}}
   {{{ gpu.makeReferenceRelease('Texture') }}}
   {{{ gpu.makeReferenceRelease('TextureView') }}}
@@ -697,6 +696,9 @@ var LibraryWebGPU = {
 
   {{{ gpu.makeReferenceRelease('RenderBundleEncoder') }}}
   {{{ gpu.makeReferenceRelease('RenderBundle') }}}
+
+  js_wgpuBufferReference: function(id) { WebGPU.mgrBuffer.reference(id); },
+  js_wgpuBufferRelease: function(id) { WebGPU.mgrBuffer.release(id); },
 
   // FIXME: single-queue hack
   wgpuQueueReference: function(id) {},
