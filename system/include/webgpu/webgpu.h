@@ -1260,6 +1260,7 @@ typedef void (*WGPUProcDeviceRelease)(WGPUDevice device);
 // Procs of Instance
 typedef WGPUSurface (*WGPUProcInstanceCreateSurface)(WGPUInstance instance, WGPUSurfaceDescriptor const * descriptor);
 typedef void (*WGPUProcInstanceProcessEvents)(WGPUInstance instance);
+typedef WGPURequestAdapterStatus (*WGPUProcInstanceRequestAdapterSync)(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPUAdapter * result);
 typedef void (*WGPUProcInstanceRequestAdapter)(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallback callback, void * userdata);
 typedef void (*WGPUProcInstanceReference)(WGPUInstance instance);
 typedef void (*WGPUProcInstanceRelease)(WGPUInstance instance);
@@ -1497,6 +1498,7 @@ WGPU_EXPORT void wgpuDeviceRelease(WGPUDevice device);
 // Methods of Instance
 WGPU_EXPORT WGPUSurface wgpuInstanceCreateSurface(WGPUInstance instance, WGPUSurfaceDescriptor const * descriptor);
 WGPU_EXPORT void wgpuInstanceProcessEvents(WGPUInstance instance);
+WGPU_EXPORT WGPURequestAdapterStatus wgpuInstanceRequestAdapterSync(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPUAdapter * result);
 WGPU_EXPORT void wgpuInstanceRequestAdapter(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallback callback, void * userdata);
 WGPU_EXPORT void wgpuInstanceReference(WGPUInstance instance);
 WGPU_EXPORT void wgpuInstanceRelease(WGPUInstance instance);
