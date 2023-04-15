@@ -2481,47 +2481,48 @@ var LibraryWebGPU = {
   wgpuInstanceRequestAdapterSync__async: true,
   wgpuInstanceRequestAdapterSync__sig: 'ippp',
   wgpuInstanceRequestAdapterSync: function(instanceId, options, resultPtr) {
-#if ASYNCIFY == 2
+#if ASYNCIFY
     {{{ gpu.makeCheck('instanceId === 0, "WGPUInstance is ignored"') }}}
-
-    if (!('gpu' in navigator)) {
-      console.warn('WebGPU not available on this browser (navigator.gpu is not available)');
-
-      HEAPU32[resultPtr >> 2] = 0;
-      return {{{ gpu.RequestAdapterStatus.Unavailable }}};
-    }
-
-    var opts;
-    if (options) {
-      {{{ gpu.makeCheckDescriptor('options') }}}
-      opts = {
-        "powerPreference": WebGPU.PowerPreference[
-          {{{ gpu.makeGetU32('options', C_STRUCTS.WGPURequestAdapterOptions.powerPreference) }}}],
-        "forceFallbackAdapter":
-          {{{ gpu.makeGetBool('options', C_STRUCTS.WGPURequestAdapterOptions.forceFallbackAdapter) }}},
-      };
-    }
-
-    return navigator["gpu"]["requestAdapter"](opts).then(function(adapter) {
-      if (adapter) {
-        var adapterId = WebGPU.mgrAdapter.create(adapter);
-
-        HEAPU32[resultPtr >> 2] = adapterId;
-        return {{{ gpu.RequestAdapterStatus.Success }}};
-      } else {
-        console.warn('WebGPU not available on this system (requestAdapter returned null)');
+    return Asyncify.handleAsync(function() {
+      if (!('gpu' in navigator)) {
+        console.warn('WebGPU not available on this browser (navigator.gpu is not available)');
 
         HEAPU32[resultPtr >> 2] = 0;
         return {{{ gpu.RequestAdapterStatus.Unavailable }}};
       }
-    }, function(ex) {
-      console.warn("wgpuInstanceRequestAdapterSync:", ex);
 
-      HEAPU32[resultPtr >> 2] = 0;
-      return {{{ gpu.RequestAdapterStatus.Error }}};
+      var opts;
+      if (options) {
+        {{{ gpu.makeCheckDescriptor('options') }}}
+        opts = {
+          "powerPreference": WebGPU.PowerPreference[
+            {{{ gpu.makeGetU32('options', C_STRUCTS.WGPURequestAdapterOptions.powerPreference) }}}],
+          "forceFallbackAdapter":
+            {{{ gpu.makeGetBool('options', C_STRUCTS.WGPURequestAdapterOptions.forceFallbackAdapter) }}},
+        };
+      }
+
+      return navigator["gpu"]["requestAdapter"](opts).then(function(adapter) {
+        if (adapter) {
+          var adapterId = WebGPU.mgrAdapter.create(adapter);
+
+          HEAPU32[resultPtr >> 2] = adapterId;
+          return {{{ gpu.RequestAdapterStatus.Success }}};
+        } else {
+          console.warn('WebGPU not available on this system (requestAdapter returned null)');
+
+          HEAPU32[resultPtr >> 2] = 0;
+          return {{{ gpu.RequestAdapterStatus.Unavailable }}};
+        }
+      }, function(ex) {
+        console.warn("wgpuInstanceRequestAdapterSync:", ex);
+
+        HEAPU32[resultPtr >> 2] = 0;
+        return {{{ gpu.RequestAdapterStatus.Error }}};
+      });
     });
 #else
-    abort('wgpuInstanceRequestAdapterSync requires ASYNCIFY=2 (TODO: also support ASYNCIFY=1)');
+    abort('wgpuInstanceRequestAdapterSync requires ASYNCIFY=1 or ASYNCIFY=2');
 #endif
   },
 
