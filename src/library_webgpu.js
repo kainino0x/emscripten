@@ -94,6 +94,10 @@ wgpu${type}Release: function(id) { WebGPU.mgr${type}.release(id) },`;
       OffsetOutOfRange: 7,
       SizeOutOfRange: 8,
     },
+    CallbackFlag: {
+      ProcessEvents: 1,
+      Spontaneous: 2,
+    },
     ErrorType: {
       NoError: 0,
       Validation: 1,
@@ -146,6 +150,11 @@ wgpu${type}Release: function(id) { WebGPU.mgr${type}.release(id) },`;
       Instance: 1,
       VertexBufferNotUsed: 2,
     },
+    WaitStatus: {
+      Success: 0,
+      TimedOut: 1,
+      UnsupportedTimeout: 2,
+    },
   };
   null;
 }}}
@@ -159,6 +168,46 @@ var LibraryWebGPU = {
         var messagePtr = stringToUTF8OnStack(message);
         {{{ makeDynCall('viii', 'callback') }}}(type, messagePtr, userdata);
       });
+    },
+
+    _nextFutureID: 1,
+    _trackedFutures: [],
+    trackFuture: function(promise, callbackFlags, onResolve) {
+      const spontaneous = Boolean(callbackFlags & {{{ gpu.CallbackFlag.Spontaneous}}});
+
+      const futureID = WebGPU._nextFutureID++;
+      let resolveOnReady;
+      const tracked = {
+        succeeded: undefined, // undefined=pending, true=success, false=failure
+        result: undefined,
+        onReady: new Promise(res => { resolveOnReady = res; }),
+        setReady(succeeded, result) {
+          this.succeeded = succeeded;
+          this.result = result;
+          if (spontaneous) this.complete();
+          resolveOnReady(futureID);
+        },
+        complete() {
+          #if ASSERTIONS
+          assert(futureID in WebGPU._trackedFutures);
+          assert(this.succeeded !== undefined);
+          #endif
+          delete WebGPU._trackedFutures[futureID];
+          onResolve(this.succeeded, this.result);
+        },
+      };
+      WebGPU._trackedFutures[futureID] = tracked;
+
+      {{{ runtimeKeepalivePush() }}}
+      promise.then((result) => {
+        {{{ runtimeKeepalivePop() }}}
+        tracked.setReady(true);
+      }, (result) => {
+        {{{ runtimeKeepalivePop() }}}
+        tracked.setReady(false);
+      });
+
+      return futureID; // FIXME this is supposed to be a struct. How do you return a struct? (maybe wrap in C)
     },
 
     initManagers: function() {
@@ -1507,6 +1556,18 @@ var LibraryWebGPU = {
     });
   },
 
+  wgpuQueueOnSubmittedWorkDone2__deps: ['$callUserCallback'],
+  wgpuQueueOnSubmittedWorkDone2__sig: 'jpipp',
+  wgpuQueueOnSubmittedWorkDone2: function(queueId, callbackFlags, callback, userdata) {
+    var queue = WebGPU.mgrQueue.get(queueId);
+    return WebGPU.trackFuture(queue["onSubmittedWorkDone"](), callbackFlags, (succeeded) => {
+      callUserCallback(() => {
+        const status = succeeded ? {{{ gpu.QueueWorkDoneStatus.Success }}} : {{{ gpu.QueueWorkDoneStatus.Error }}};
+        {{{ makeDynCall('vii', 'callback') }}}(status, userdata);
+      });
+    });
+  },
+
   wgpuQueueWriteBuffer: function(queueId, bufferId, bufferOffset, data, size) {
     var queue = WebGPU.mgrQueue.get(queueId);
     var buffer = WebGPU.mgrBuffer.get(bufferId);
@@ -2422,6 +2483,61 @@ var LibraryWebGPU = {
         });
       });
     });
+  },
+
+  wgpuInstanceWaitAny__deps: [],
+  wgpuInstanceWaitAny__async: true,
+  wgpuInstanceWaitAny__sig: 'ipppj',
+  wgpuInstanceWaitAny: async function(instanceId, /*size_t*/ count, infosPtr, /*uint64_t*/timeoutNS) {
+    {{{ gpu.makeCheck('instanceId === 1, "WGPUInstance must be created by wgpuCreateInstance"') }}}
+    if (!count) {
+      return {{{ gpu.WaitStatus.Success }}};
+    }
+
+    const futureIDToIndex = new Map();
+    let anyCompleted = false;
+    for (let i = 0; i < count; ++i) {
+      const infoPtr = infosPtr + i * {{{ C_STRUCTS.WGPUFutureWaitInfo.__size__ }}};
+      const futureID = {{{ gpu.makeGetU64('infoPtr', C_STRUCTS.WGPUFuture.id) }}};
+      const completed = !(futureID in WebGPU._trackedFutures);
+      {{{ makeSetValue('infoPtr', C_STRUCTS.WGPUFutureWaitInfo.completed, 'completed', 'i32') }}};
+      if (completed) {
+        anyCompleted = true;
+      } else {
+        futureIDToIndex.set(futureID, i);
+      }
+    }
+
+    if (anyCompleted) {
+      return {{{ gpu.WaitStatus.Success }}};
+    }
+    if (timeoutNS == 0) {
+      return {{{ gpu.WaitStatus.TimedOut }}};
+    }
+
+    const waitPromises = [];
+    const kFutureIDForTimeout = 0;
+    if (timeoutNS != -1) {  // -1 is UINT64_MAX (infinite timeout)
+      waitPromises.push(new Promise(resolve => {
+        setTimeout(() => { resolve(kFutureIDForTimeout); }, timeoutNS / 1e6);
+      }));
+    }
+
+    for (const futureID of futureIDToIndex.keys()) {
+      const tracked = WebGPU._trackedFutures[futureID];
+      waitPromises.push(tracked.onReady);
+    }
+    const firstCompletedFutureID = await Promise.any(waitPromises);
+    if (firstCompletedFutureID == kFutureIDForTimeout) {
+      return {{{ gpu.WaitStatus.TimedOut }}};
+    }
+    WebGPU._trackedFutures[firstCompletedFutureID].complete();
+    {
+      const i = futureIDToIndex.get(firstCompletedFutureID);
+      const infoPtr = infosPtr + i * {{{ C_STRUCTS.WGPUFutureWaitInfo.__size__ }}};
+      {{{ makeSetValue('infoPtr', C_STRUCTS.WGPUFutureWaitInfo.completed, '1', 'i32') }}};
+    }
+    return {{{ gpu.WaitStatus.Success }}};
   },
 
   // WGPUAdapter

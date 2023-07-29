@@ -587,6 +587,15 @@ namespace wgpu {
     static_assert(static_cast<uint32_t>(VertexStepMode::Instance) == WGPUVertexStepMode_Instance, "value mismatch for VertexStepMode::Instance");
     static_assert(static_cast<uint32_t>(VertexStepMode::VertexBufferNotUsed) == WGPUVertexStepMode_VertexBufferNotUsed, "value mismatch for VertexStepMode::VertexBufferNotUsed");
 
+    // WaitStatus
+
+    static_assert(sizeof(WaitStatus) == sizeof(WGPUWaitStatus), "sizeof mismatch for WaitStatus");
+    static_assert(alignof(WaitStatus) == alignof(WGPUWaitStatus), "alignof mismatch for WaitStatus");
+
+    static_assert(static_cast<uint32_t>(WaitStatus::Success) == WGPUWaitStatus_Success, "value mismatch for WaitStatus::Success");
+    static_assert(static_cast<uint32_t>(WaitStatus::TimedOut) == WGPUWaitStatus_TimedOut, "value mismatch for WaitStatus::TimedOut");
+    static_assert(static_cast<uint32_t>(WaitStatus::UnsupportedTimeout) == WGPUWaitStatus_UnsupportedTimeout, "value mismatch for WaitStatus::UnsupportedTimeout");
+
     // BufferUsage
 
     static_assert(sizeof(BufferUsage) == sizeof(WGPUBufferUsageFlags), "sizeof mismatch for BufferUsage");
@@ -603,6 +612,15 @@ namespace wgpu {
     static_assert(static_cast<uint32_t>(BufferUsage::Storage) == WGPUBufferUsage_Storage, "value mismatch for BufferUsage::Storage");
     static_assert(static_cast<uint32_t>(BufferUsage::Indirect) == WGPUBufferUsage_Indirect, "value mismatch for BufferUsage::Indirect");
     static_assert(static_cast<uint32_t>(BufferUsage::QueryResolve) == WGPUBufferUsage_QueryResolve, "value mismatch for BufferUsage::QueryResolve");
+
+    // CallbackFlag
+
+    static_assert(sizeof(CallbackFlag) == sizeof(WGPUCallbackFlags), "sizeof mismatch for CallbackFlag");
+    static_assert(alignof(CallbackFlag) == alignof(WGPUCallbackFlags), "alignof mismatch for CallbackFlag");
+
+    static_assert(static_cast<uint32_t>(CallbackFlag::None) == WGPUCallbackFlag_None, "value mismatch for CallbackFlag::None");
+    static_assert(static_cast<uint32_t>(CallbackFlag::ProcessEvents) == WGPUCallbackFlag_ProcessEvents, "value mismatch for CallbackFlag::ProcessEvents");
+    static_assert(static_cast<uint32_t>(CallbackFlag::Spontaneous) == WGPUCallbackFlag_Spontaneous, "value mismatch for CallbackFlag::Spontaneous");
 
     // ColorWriteMask
 
@@ -841,6 +859,14 @@ namespace wgpu {
             "offsetof mismatch for Extent3D::height");
     static_assert(offsetof(Extent3D, depthOrArrayLayers) == offsetof(WGPUExtent3D, depthOrArrayLayers),
             "offsetof mismatch for Extent3D::depthOrArrayLayers");
+
+    // Future
+
+    static_assert(sizeof(Future) == sizeof(WGPUFuture), "sizeof mismatch for Future");
+    static_assert(alignof(Future) == alignof(WGPUFuture), "alignof mismatch for Future");
+
+    static_assert(offsetof(Future, id) == offsetof(WGPUFuture, id),
+            "offsetof mismatch for Future::id");
 
     // InstanceDescriptor
 
@@ -1403,6 +1429,16 @@ namespace wgpu {
             "offsetof mismatch for DepthStencilState::depthBiasSlopeScale");
     static_assert(offsetof(DepthStencilState, depthBiasClamp) == offsetof(WGPUDepthStencilState, depthBiasClamp),
             "offsetof mismatch for DepthStencilState::depthBiasClamp");
+
+    // FutureWaitInfo
+
+    static_assert(sizeof(FutureWaitInfo) == sizeof(WGPUFutureWaitInfo), "sizeof mismatch for FutureWaitInfo");
+    static_assert(alignof(FutureWaitInfo) == alignof(WGPUFutureWaitInfo), "alignof mismatch for FutureWaitInfo");
+
+    static_assert(offsetof(FutureWaitInfo, future) == offsetof(WGPUFutureWaitInfo, future),
+            "offsetof mismatch for FutureWaitInfo::future");
+    static_assert(offsetof(FutureWaitInfo, completed) == offsetof(WGPUFutureWaitInfo, completed),
+            "offsetof mismatch for FutureWaitInfo::completed");
 
     // ImageCopyBuffer
 
@@ -2069,6 +2105,10 @@ namespace wgpu {
     void Instance::RequestAdapter(RequestAdapterOptions const * options, RequestAdapterCallback callback, void * userdata) const {
         wgpuInstanceRequestAdapter(Get(), reinterpret_cast<WGPURequestAdapterOptions const * >(options), callback, userdata);
     }
+    WaitStatus Instance::WaitAny(size_t count, FutureWaitInfo * futures, uint64_t timeoutNS) const {
+        auto result = wgpuInstanceWaitAny(Get(), count, reinterpret_cast<WGPUFutureWaitInfo * >(futures), timeoutNS);
+        return static_cast<WaitStatus>(result);
+    }
     void Instance::WGPUReference(WGPUInstance handle) {
         if (handle != nullptr) {
             wgpuInstanceReference(handle);
@@ -2136,6 +2176,12 @@ namespace wgpu {
 
     void Queue::OnSubmittedWorkDone(uint64_t signalValue, QueueWorkDoneCallback callback, void * userdata) const {
         wgpuQueueOnSubmittedWorkDone(Get(), signalValue, callback, userdata);
+    }
+    Future Queue::OnSubmittedWorkDone2(CallbackFlag callbackFlags, QueueWorkDoneCallback callback, void * userdata) const {
+        auto result = wgpuQueueOnSubmittedWorkDone2(Get(), static_cast<WGPUCallbackFlag>(callbackFlags), callback, userdata);
+        return Future {
+            result.id
+        };
     }
     void Queue::SetLabel(char const * label) const {
         wgpuQueueSetLabel(Get(), reinterpret_cast<char const * >(label));

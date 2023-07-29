@@ -590,6 +590,12 @@ namespace wgpu {
         VertexBufferNotUsed = 0x00000002,
     };
 
+    enum class WaitStatus : uint32_t {
+        Success = 0x00000000,
+        TimedOut = 0x00000001,
+        UnsupportedTimeout = 0x00000002,
+    };
+
 
     enum class BufferUsage : uint32_t {
         None = 0x00000000,
@@ -603,6 +609,12 @@ namespace wgpu {
         Storage = 0x00000080,
         Indirect = 0x00000100,
         QueryResolve = 0x00000200,
+    };
+
+    enum class CallbackFlag : uint32_t {
+        None = 0x00000000,
+        ProcessEvents = 0x00000001,
+        Spontaneous = 0x00000002,
     };
 
     enum class ColorWriteMask : uint32_t {
@@ -684,6 +696,7 @@ namespace wgpu {
     struct ComputePassTimestampWrite;
     struct ConstantEntry;
     struct Extent3D;
+    struct Future;
     struct InstanceDescriptor;
     struct Limits;
     struct MultisampleState;
@@ -719,6 +732,7 @@ namespace wgpu {
     struct CompilationInfo;
     struct ComputePassDescriptor;
     struct DepthStencilState;
+    struct FutureWaitInfo;
     struct ImageCopyBuffer;
     struct ImageCopyTexture;
     struct ProgrammableStageDescriptor;
@@ -1004,6 +1018,7 @@ namespace wgpu {
         Surface CreateSurface(SurfaceDescriptor const * descriptor) const;
         void ProcessEvents() const;
         void RequestAdapter(RequestAdapterOptions const * options, RequestAdapterCallback callback, void * userdata) const;
+        WaitStatus WaitAny(size_t count, FutureWaitInfo * futures, uint64_t timeoutNS) const;
 
       private:
         friend ObjectBase<Instance, WGPUInstance>;
@@ -1046,6 +1061,7 @@ namespace wgpu {
         using ObjectBase::operator=;
 
         void OnSubmittedWorkDone(uint64_t signalValue, QueueWorkDoneCallback callback, void * userdata) const;
+        Future OnSubmittedWorkDone2(CallbackFlag callbackFlags, QueueWorkDoneCallback callback, void * userdata) const;
         void SetLabel(char const * label) const;
         void Submit(size_t commandCount, CommandBuffer const * commands) const;
         void WriteBuffer(Buffer const& buffer, uint64_t bufferOffset, void const * data, size_t size) const;
@@ -1338,6 +1354,10 @@ namespace wgpu {
         uint32_t width;
         uint32_t height = 1;
         uint32_t depthOrArrayLayers = 1;
+    };
+
+    struct Future {
+        uint64_t id;
     };
 
     struct InstanceDescriptor {
@@ -1646,6 +1666,11 @@ namespace wgpu {
         float depthBiasClamp = 0.0f;
     };
 
+    struct FutureWaitInfo {
+        Future const future;
+        bool completed;
+    };
+
     struct ImageCopyBuffer {
         ChainedStruct const * nextInChain = nullptr;
         TextureDataLayout layout;
@@ -1787,6 +1812,11 @@ namespace wgpu {
     };
 
     template<>
+    struct IsDawnBitmask<wgpu::CallbackFlag> {
+        static constexpr bool enable = true;
+    };
+
+    template<>
     struct IsDawnBitmask<wgpu::ColorWriteMask> {
         static constexpr bool enable = true;
     };
@@ -1806,6 +1836,6 @@ namespace wgpu {
         static constexpr bool enable = true;
     };
 
-}  // namespace wgpu
+} // namespace wgpu
 
 #endif // WEBGPU_CPP_H_

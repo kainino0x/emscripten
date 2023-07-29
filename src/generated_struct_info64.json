@@ -965,6 +965,15 @@
             "targetCount": 40,
             "targets": 48
         },
+        "WGPUFuture": {
+            "__size__": 8,
+            "id": 0
+        },
+        "WGPUFutureWaitInfo": {
+            "__size__": 16,
+            "completed": 8,
+            "future": 0
+        },
         "WGPUImageCopyBuffer": {
             "__size__": 40,
             "buffer": 32,

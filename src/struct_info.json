@@ -1270,6 +1270,9 @@
                 "height",
                 "depthOrArrayLayers"
             ],
+            "WGPUFuture": [
+                "id"
+            ],
             "WGPUInstanceDescriptor": [
                 "nextInChain"
             ],
@@ -1520,6 +1523,10 @@
                 "depthBias",
                 "depthBiasSlopeScale",
                 "depthBiasClamp"
+            ],
+            "WGPUFutureWaitInfo": [
+                "future",
+                "completed"
             ],
             "WGPUImageCopyBuffer": [
                 "nextInChain",
