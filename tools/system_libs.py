@@ -1834,6 +1834,14 @@ class libGL(MTLibrary):
     )
 
 
+class libwebgpu(MTLibrary):
+  name = 'libwebgpu'
+
+  cflags = ['-std=c++11']
+  src_dir = 'system/lib/webgpu'
+  src_files = ['webgpu.cpp']
+
+
 class libwebgpu_cpp(MTLibrary):
   name = 'libwebgpu_cpp'
 
@@ -2306,6 +2314,9 @@ def get_libs_to_link(args, forced, only_forced):
 
   if settings.USE_WEBGPU:
     add_library('libwebgpu_cpp')
+
+  if settings.USE_WEBGPU1:
+    add_library('libwebgpu')
 
   if settings.WASM_WORKERS:
     add_library('libwasm_workers')

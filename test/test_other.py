@@ -11695,6 +11695,10 @@ Aborted(`Module.arguments` has been replaced by `arguments_` (the initial value 
     for args in [[], ['-sASSERTIONS'], ['-sASSERTIONS', '--closure=1'], ['-sMAIN_MODULE=1']]:
       self.run_process([EMXX, test_file('webgpu_jsvalstore.cpp'), '-sUSE_WEBGPU', '-sASYNCIFY'] + args)
 
+  def test_webgpu_compiletest1(self):
+    for args in [[], ['-sASSERTIONS'], ['-sASSERTIONS', '--closure=1'], ['-sMAIN_MODULE=1']]:
+      self.run_process([EMXX, test_file('webgpu1.cpp'), '-sUSE_WEBGPU1', '-sASYNCIFY'] + args)
+
   def test_signature_mismatch(self):
     create_file('a.c', 'void foo(); int main() { foo(); return 0; }')
     create_file('b.c', 'int foo() { return 1; }')

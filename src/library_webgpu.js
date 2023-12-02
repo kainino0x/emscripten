@@ -168,6 +168,7 @@ var LibraryWebGPU = {
   $WebGPU__postset: 'WebGPU.initManagers();',
   $WebGPU__deps: ['$withStackSave', '$stringToUTF8OnStack'],
   $WebGPU: {
+
     errorCallback: (callback, type, message, userdata) => {
       withStackSave(() => {
         var messagePtr = stringToUTF8OnStack(message);

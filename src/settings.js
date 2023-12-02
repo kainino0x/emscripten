@@ -565,6 +565,7 @@ var GL_PREINITIALIZED_CONTEXT = false;
 // Enables support for WebGPU (via "webgpu/webgpu.h").
 // [link]
 var USE_WEBGPU = false;
+var USE_WEBGPU1 = false;
 
 // Enables building of stb-image, a tiny public-domain library for decoding
 // images, allowing decoding of images without using the browser's built-in

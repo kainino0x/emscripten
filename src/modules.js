@@ -177,6 +177,10 @@ global.LibraryManager = {
       libraries.push('library_html5_webgpu.js');
     }
 
+    if (USE_WEBGPU1) {
+      libraries.push('library_emwebgpu.js');
+    }
+
     if (!STRICT) {
       libraries.push('library_legacy.js');
     }
