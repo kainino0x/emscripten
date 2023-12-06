@@ -72,7 +72,6 @@ MINIMAL_TASKS = [
     'libnoexit',
     'sqlite3',
     'sqlite3-mt',
-    'libwebgpu_cpp',
 ]
 
 # Additional tasks on top of MINIMAL_TASKS that are necessary for PIC testing on
