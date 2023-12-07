@@ -10,6 +10,8 @@
 
 #include <webgpu/webgpu.h>
 
+#include <cassert>
+
 extern "C" {
 
 //
@@ -36,8 +38,20 @@ void emwgpuDestroy(void* id);
   void wgpu##Name##Destroy(WGPU##Name o) { emwgpuDestroy(o); }
 
 //
-// WebGPU method definitions, organized by "class"
+// WebGPU function definitions, with methods organized by "class"
 //
+
+// Standalone (non-method) functions
+
+WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor* descriptor) {
+  assert(descriptor == nullptr); // descriptor not implemented yet
+  return reinterpret_cast<WGPUInstance>(1);
+}
+
+// Instance
+
+void wgpuInstanceReference(WGPUInstance) { /* no-op for now */ }
+void wgpuInstanceRelease(WGPUInstance) { /* no-op for now */ }
 
 // Surface
 
