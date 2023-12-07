@@ -2193,7 +2193,6 @@ var LibraryWebGPU = {
   wgpuInstanceCreateSurface__deps: ['$findCanvasEventTarget'],
   wgpuInstanceCreateSurface: (instanceId, descriptor) => {
     {{{ gpu.makeCheck('descriptor') }}}
-    {{{ gpu.makeCheck('instanceId === 1, "WGPUInstance must be created by wgpuCreateInstance"') }}}
     var nextInChainPtr = {{{ makeGetValue('descriptor', C_STRUCTS.WGPUSurfaceDescriptor.nextInChain, '*') }}};
 #if ASSERTIONS
     assert(nextInChainPtr !== 0);
@@ -2225,8 +2224,9 @@ var LibraryWebGPU = {
 #endif
   },
 
+  emwgpuRequestAdapter__i53abi: false,
   emwgpuRequestAdapter__deps: ['$callUserCallback', '$stringToUTF8OnStack', 'emwgpuOnRequestAdapterCompleted'],
-  emwgpuRequestAdapter: (request, options) => {
+  emwgpuRequestAdapter: (instanceId, futureId1, futureId2, options) => {
     var opts;
     if (options) {
       {{{ gpu.makeCheckDescriptor('options') }}}
@@ -2241,7 +2241,7 @@ var LibraryWebGPU = {
     if (!('gpu' in navigator)) {
       withStackSave(() => {
         var messagePtr = stringToUTF8OnStack('WebGPU not available on this browser (navigator.gpu is not available)');
-        _emwgpuOnRequestAdapterCompleted(request, {{{ gpu.RequestAdapterStatus.Unavailable }}}, 0, messagePtr);
+        _emwgpuOnRequestAdapterCompleted(instanceId, futureId1, futureId2, {{{ gpu.RequestAdapterStatus.Unavailable }}}, 0, messagePtr);
       });
       return;
     }
@@ -2251,18 +2251,18 @@ var LibraryWebGPU = {
       {{{ runtimeKeepalivePop() }}}
       if (adapter) {
         var adapterId = WebGPU._tableInsert(adapter);
-        _emwgpuOnRequestAdapterCompleted(request, {{{ gpu.RequestAdapterStatus.Success }}}, adapterId, 0);
+        _emwgpuOnRequestAdapterCompleted(instanceId, futureId1, futureId2, {{{ gpu.RequestAdapterStatus.Success }}}, adapterId, 0);
       } else {
         withStackSave(() => {
           var messagePtr = stringToUTF8OnStack('WebGPU not available on this system (requestAdapter returned null)');
-          _emwgpuOnRequestAdapterCompleted(request, {{{ gpu.RequestAdapterStatus.Unavailable }}}, 0, messagePtr);
+          _emwgpuOnRequestAdapterCompleted(instanceId, futureId1, futureId2, {{{ gpu.RequestAdapterStatus.Unavailable }}}, 0, messagePtr);
         });
       }
     }, (ex) => {
       {{{ runtimeKeepalivePop() }}}
       withStackSave(() => {
         var messagePtr = stringToUTF8OnStack(ex.message);
-        _emwgpuOnRequestAdapterCompleted(request, {{{ gpu.RequestAdapterStatus.Error }}}, 0, messagePtr);
+        _emwgpuOnRequestAdapterCompleted(instanceId, futureId1, futureId2, {{{ gpu.RequestAdapterStatus.Error }}}, 0, messagePtr);
       });
     });
   },
@@ -2484,7 +2484,9 @@ for (var value in LibraryWebGPU.$WebGPU.FeatureName) {
 
 for (const key of Object.keys(LibraryWebGPU)) {
   if (typeof LibraryWebGPU[key] === 'function') {
-    LibraryWebGPU[key + '__i53abi'] = true;
+    if (!(key + '__i53abi' in LibraryWebGPU)) {
+      LibraryWebGPU[key + '__i53abi'] = true;
+    }
     if (!(key + '__proxy' in LibraryWebGPU)) {
       LibraryWebGPU[key + '__proxy'] = 'sync';
     }

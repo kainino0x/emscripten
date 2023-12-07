@@ -1838,7 +1838,7 @@ class libGL(MTLibrary):
 class libwebgpu(MTLibrary):
   name = 'libwebgpu'
 
-  cflags = ['-std=c++11']
+  cflags = ['-std=c++14']
   src_dir = 'system/lib/webgpu'
   src_files = ['webgpu.cpp']
 
