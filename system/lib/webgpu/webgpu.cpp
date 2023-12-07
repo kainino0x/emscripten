@@ -23,6 +23,21 @@ void emwgpuRelease(void* id);
 void emwgpuSetLabel(void* id, const char* label);
 void emwgpuDestroy(void* id);
 
+struct AdapterRequest {
+  WGPURequestAdapterCallback callback;
+  void* userdata;
+};
+void emwgpuRequestAdapter(AdapterRequest* request, const WGPURequestAdapterOptions* options);
+
+//
+// Definitions for C++ emwgpu functions (callable from library_webgpu.js)
+//
+
+void emwgpuOnRequestAdapterCompleted(AdapterRequest* request, WGPURequestAdapterStatus status, WGPUAdapter adapter, const char* message) {
+  request->callback(status, adapter, message, request->userdata);
+  delete request;
+}
+
 } // extern "C"
 
 //
@@ -52,6 +67,11 @@ WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor* descriptor) {
 
 void wgpuInstanceReference(WGPUInstance) { /* no-op for now */ }
 void wgpuInstanceRelease(WGPUInstance) { /* no-op for now */ }
+
+void wgpuInstanceRequestAdapter(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallback callback, void * userdata) {
+  auto* request = new AdapterRequest{callback, userdata};
+  emwgpuRequestAdapter(request, options);
+}
 
 // Surface
 

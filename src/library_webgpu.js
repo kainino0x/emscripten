@@ -2225,10 +2225,8 @@ var LibraryWebGPU = {
 #endif
   },
 
-  wgpuInstanceRequestAdapter__deps: ['$callUserCallback', '$stringToUTF8OnStack'],
-  wgpuInstanceRequestAdapter: (instanceId, options, callback, userdata) => {
-    {{{ gpu.makeCheck('instanceId === 1, "WGPUInstance must be created by wgpuCreateInstance"') }}}
-
+  emwgpuRequestAdapter__deps: ['$callUserCallback', '$stringToUTF8OnStack', 'emwgpuOnRequestAdapterCompleted'],
+  emwgpuRequestAdapter: (request, options) => {
     var opts;
     if (options) {
       {{{ gpu.makeCheckDescriptor('options') }}}
@@ -2243,7 +2241,7 @@ var LibraryWebGPU = {
     if (!('gpu' in navigator)) {
       withStackSave(() => {
         var messagePtr = stringToUTF8OnStack('WebGPU not available on this browser (navigator.gpu is not available)');
-        {{{ makeDynCall('vippp', 'callback') }}}({{{ gpu.RequestAdapterStatus.Unavailable }}}, 0, messagePtr, userdata);
+        _emwgpuOnRequestAdapterCompleted(request, {{{ gpu.RequestAdapterStatus.Unavailable }}}, 0, messagePtr);
       });
       return;
     }
@@ -2251,24 +2249,20 @@ var LibraryWebGPU = {
     {{{ runtimeKeepalivePush() }}}
     navigator["gpu"]["requestAdapter"](opts).then((adapter) => {
       {{{ runtimeKeepalivePop() }}}
-      callUserCallback(() => {
-        if (adapter) {
-          var adapterId = WebGPU._tableInsert(adapter);
-          {{{ makeDynCall('vippp', 'callback') }}}({{{ gpu.RequestAdapterStatus.Success }}}, adapterId, 0, userdata);
-        } else {
-          withStackSave(() => {
-            var messagePtr = stringToUTF8OnStack('WebGPU not available on this system (requestAdapter returned null)');
-            {{{ makeDynCall('vippp', 'callback') }}}({{{ gpu.RequestAdapterStatus.Unavailable }}}, 0, messagePtr, userdata);
-          });
-        }
-      });
+      if (adapter) {
+        var adapterId = WebGPU._tableInsert(adapter);
+        _emwgpuOnRequestAdapterCompleted(request, {{{ gpu.RequestAdapterStatus.Success }}}, adapterId, 0);
+      } else {
+        withStackSave(() => {
+          var messagePtr = stringToUTF8OnStack('WebGPU not available on this system (requestAdapter returned null)');
+          _emwgpuOnRequestAdapterCompleted(request, {{{ gpu.RequestAdapterStatus.Unavailable }}}, 0, messagePtr);
+        });
+      }
     }, (ex) => {
       {{{ runtimeKeepalivePop() }}}
-      callUserCallback(() => {
-        withStackSave(() => {
-          var messagePtr = stringToUTF8OnStack(ex.message);
-          {{{ makeDynCall('vippp', 'callback') }}}({{{ gpu.RequestAdapterStatus.Error }}}, 0, messagePtr, userdata);
-        });
+      withStackSave(() => {
+        var messagePtr = stringToUTF8OnStack(ex.message);
+        _emwgpuOnRequestAdapterCompleted(request, {{{ gpu.RequestAdapterStatus.Error }}}, 0, messagePtr);
       });
     });
   },
