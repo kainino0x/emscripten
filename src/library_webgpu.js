@@ -2270,9 +2270,9 @@ var LibraryWebGPU = {
     {{{ gpu.convertSentinelToUndefined('size') }}}
     pass["setVertexBuffer"](slot, buffer, offset, size);
   },
-  emwgpuRenderPassEncoderNoOp: 'GPURenderPassEncoder.prototype.noOp.call.bind(GPURenderPassEncoder.prototype.noOp)',
-  emwgpuRenderPassEncoderDraw: 'GPURenderPassEncoder.prototype.draw.call.bind(GPURenderPassEncoder.prototype.draw)',
-  emwgpuRenderPassEncoderSetPipeline: 'GPURenderPassEncoder.prototype.setPipeline.call.bind(GPURenderPassEncoder.prototype.setPipeline)',
+  emwgpuRenderPassEncoderNoOp: 'Function.prototype.call.bind(GPURenderPassEncoder.prototype.noOp)',
+  emwgpuRenderPassEncoderDraw: 'Function.prototype.call.bind(GPURenderPassEncoder.prototype.draw)',
+  emwgpuRenderPassEncoderSetPipeline: 'Function.prototype.call.bind(GPURenderPassEncoder.prototype.setPipeline)',
   wgpuRenderPassEncoderDrawIndexed: (passId, indexCount, instanceCount, firstIndex, baseVertex, firstInstance) => {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass["drawIndexed"](indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
