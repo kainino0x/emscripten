@@ -1,0 +1,29 @@
+/**
+ * @license
+ * Copyright 2024 The Emscripten Authors
+ * SPDX-License-Identifier: MIT
+ */
+
+// Declarations for JS emwgpu functions (defined in library_webgpu.js).
+// This should be included only from `webgpu.cpp` for now.
+
+#include <webgpu/webgpu.h>
+#include <emscripten/em_macros.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void emwgpu_console_log(__externref_t value);
+
+__externref_t emwgpuDeviceCreateRenderPipeline(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor, int * idOutPtr);
+
+__externref_t emwgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder commandEncoder, WGPURenderPassDescriptor const * descriptor, int * idOutPtr);
+
+void emwgpuRenderPassEncoderNoOp(__externref_t renderPassEncoder, uint32_t x);
+void emwgpuRenderPassEncoderDraw(__externref_t renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
+void emwgpuRenderPassEncoderSetPipeline(__externref_t renderPassEncoder, __externref_t renderPipeline);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif

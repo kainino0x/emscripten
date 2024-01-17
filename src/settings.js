@@ -563,6 +563,9 @@ var GL_FFP_ONLY = false;
 // [link]
 var GL_PREINITIALIZED_CONTEXT = false;
 
+// [compile+link]
+var REFERENCE_TYPES = false;
+
 // Enables support for WebGPU (via "webgpu/webgpu.h").
 // [link]
 var USE_WEBGPU = false;

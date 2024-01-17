@@ -175,6 +175,10 @@ wgpu${type}Release: (id) => WebGPU.mgr${type}.release(id),`;
 }}}
 
 var LibraryWebGPU = {
+  emwgpu_console_log: (value) => {
+    console.log('emwgpu_console_log:', value);
+  },
+
   $WebGPU__postset: 'WebGPU.initManagers();',
   $WebGPU__deps: ['$withStackSave', '$stringToUTF8OnStack'],
   $WebGPU: {
@@ -188,12 +192,21 @@ var LibraryWebGPU = {
     initManagers: () => {
       if (WebGPU.mgrDevice) return;
 
+      // FIXME: How to call emwgpuTable_RenderPassEncoder_Init from here?
+      // Or better, emwgpuTable_RenderPassEncoder.grow(1)
+
       /** @constructor */
       function Manager() {
         this.objects = {};
         this.nextId = 1;
+        this.freelist = [];
         this.create = function(object, wrapper = {}) {
-          var id = this.nextId++;
+          var id;
+          if (this.freelist.length) {
+            id = this.freelist.pop();
+          } else {
+            id = this.nextId++;
+          }
           {{{ gpu.makeCheck("typeof this.objects[id] == 'undefined'") }}}
           wrapper.refcount = 1;
           wrapper.object = object;
@@ -218,6 +231,7 @@ var LibraryWebGPU = {
           o.refcount--;
           if (o.refcount <= 0) {
             delete this.objects[id];
+            this.freelist.push(id);
           }
         };
       }
@@ -1447,11 +1461,15 @@ var LibraryWebGPU = {
     return desc;
   },
 
-  wgpuDeviceCreateRenderPipeline__deps: ['$generateRenderPipelineDesc'],
-  wgpuDeviceCreateRenderPipeline: (deviceId, descriptor) => {
+  emwgpuDeviceCreateRenderPipeline__deps: ['$generateRenderPipelineDesc'],
+  emwgpuDeviceCreateRenderPipeline: (deviceId, descriptor, idOutPtr) => {
     var desc = generateRenderPipelineDesc(descriptor);
     var device = WebGPU.mgrDevice.get(deviceId);
-    return WebGPU.mgrRenderPipeline.create(device["createRenderPipeline"](desc));
+
+    var pipeline = device["createRenderPipeline"](desc);
+    var id = WebGPU.mgrRenderPipeline.create(pipeline);
+    {{{ makeSetValue('idOutPtr', 0, 'id', 'i32') }}};
+    return pipeline;
   },
 
   wgpuDeviceCreateRenderPipelineAsync__deps: ['$callUserCallback', '$stringToUTF8OnStack', '$generateRenderPipelineDesc'],
@@ -1634,7 +1652,7 @@ var LibraryWebGPU = {
     return WebGPU.mgrComputePassEncoder.create(commandEncoder["beginComputePass"](desc));
   },
 
-  wgpuCommandEncoderBeginRenderPass: (encoderId, descriptor) => {
+  emwgpuCommandEncoderBeginRenderPass: (encoderId, descriptor, idOutPtr) => {
     {{{ gpu.makeCheck('descriptor') }}}
 
     function makeColorAttachment(caPtr) {
@@ -1748,7 +1766,10 @@ var LibraryWebGPU = {
     var desc = makeRenderPassDescriptor(descriptor);
 
     var commandEncoder = WebGPU.mgrCommandEncoder.get(encoderId);
-    return WebGPU.mgrRenderPassEncoder.create(commandEncoder["beginRenderPass"](desc));
+    var pass = commandEncoder["beginRenderPass"](desc);
+    var id = WebGPU.mgrRenderPassEncoder.create(pass);
+    {{{ makeSetValue('idOutPtr', 0, 'id', 'i32') }}};
+    return pass;
   },
 
   wgpuCommandEncoderClearBuffer: (encoderId, bufferId, offset, size) => {
@@ -2231,11 +2252,6 @@ var LibraryWebGPU = {
     {{{ gpu.convertSentinelToUndefined('size') }}}
     pass["setIndexBuffer"](buffer, WebGPU.IndexFormat[format], offset, size);
   },
-  wgpuRenderPassEncoderSetPipeline: (passId, pipelineId) => {
-    var pass = WebGPU.mgrRenderPassEncoder.get(passId);
-    var pipeline = WebGPU.mgrRenderPipeline.get(pipelineId);
-    pass["setPipeline"](pipeline);
-  },
   wgpuRenderPassEncoderSetScissorRect: (passId, x, y, w, h) => {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass["setScissorRect"](x, y, w, h);
@@ -2254,11 +2270,9 @@ var LibraryWebGPU = {
     {{{ gpu.convertSentinelToUndefined('size') }}}
     pass["setVertexBuffer"](slot, buffer, offset, size);
   },
-
-  wgpuRenderPassEncoderDraw: (passId, vertexCount, instanceCount, firstVertex, firstInstance) => {
-    var pass = WebGPU.mgrRenderPassEncoder.get(passId);
-    pass["draw"](vertexCount, instanceCount, firstVertex, firstInstance);
-  },
+  emwgpuRenderPassEncoderNoOp: 'GPURenderPassEncoder.prototype.noOp.call.bind(GPURenderPassEncoder.prototype.noOp)',
+  emwgpuRenderPassEncoderDraw: 'GPURenderPassEncoder.prototype.draw.call.bind(GPURenderPassEncoder.prototype.draw)',
+  emwgpuRenderPassEncoderSetPipeline: 'GPURenderPassEncoder.prototype.setPipeline.call.bind(GPURenderPassEncoder.prototype.setPipeline)',
   wgpuRenderPassEncoderDrawIndexed: (passId, indexCount, instanceCount, firstIndex, baseVertex, firstInstance) => {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass["drawIndexed"](indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
