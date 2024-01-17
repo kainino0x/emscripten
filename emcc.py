@@ -381,6 +381,9 @@ def get_clang_flags(user_args):
     for a in building.llvm_backend_args():
       flags += ['-mllvm', a]
 
+  if settings.REFERENCE_TYPES:
+    flags.append('-mreference-types')
+
   return flags
 
 
