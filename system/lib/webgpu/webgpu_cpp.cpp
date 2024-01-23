@@ -2425,8 +2425,14 @@ template <typename T>
     void RenderPassEncoder::BeginOcclusionQuery(uint32_t queryIndex) const {
         wgpuRenderPassEncoderBeginOcclusionQuery(Get(), queryIndex);
     }
-    void RenderPassEncoder::NoOp(uint32_t x) const {
-        wgpuRenderPassEncoderNoOp(Get(), x);
+    void RenderPassEncoder::NoOp_NoJS(uint32_t x) const {
+        wgpuRenderPassEncoderNoOp_NoJS(Get(), x);
+    }
+    void RenderPassEncoder::NoOp_JSByExternref(uint32_t x) const {
+        wgpuRenderPassEncoderNoOp_JSByExternref(Get(), x);
+    }
+    void RenderPassEncoder::NoOp_JSByIndex(uint32_t x) const {
+        wgpuRenderPassEncoderNoOp_JSByIndex(Get(), x);
     }
     void RenderPassEncoder::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) const {
         wgpuRenderPassEncoderDraw(Get(), vertexCount, instanceCount, firstVertex, firstInstance);

@@ -97,9 +97,16 @@ WGPURenderPassEncoder wgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder comma
 
 // RenderPassEncoder
 
-void wgpuRenderPassEncoderNoOp(WGPURenderPassEncoder renderPassEncoder, uint32_t x) {
+void wgpuRenderPassEncoderNoOp_NoJS(WGPURenderPassEncoder renderPassEncoder, uint32_t x) {
   __externref_t pass = emwgpuTable_RenderPassEncoder_Get(renderPassEncoder);
-  emwgpuRenderPassEncoderNoOp(pass, x);
+  emwgpuRenderPassEncoderNoOp_NoJS(pass, x);
+}
+void wgpuRenderPassEncoderNoOp_JSByExternref(WGPURenderPassEncoder renderPassEncoder, uint32_t x) {
+  __externref_t pass = emwgpuTable_RenderPassEncoder_Get(renderPassEncoder);
+  emwgpuRenderPassEncoderNoOp_JSByExternref(pass, x);
+}
+void wgpuRenderPassEncoderNoOp_JSByIndex(WGPURenderPassEncoder renderPassEncoder, uint32_t x) {
+  emwgpuRenderPassEncoderNoOp_JSByIndex(renderPassEncoder, x);
 }
 
 void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) {

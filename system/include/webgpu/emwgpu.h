@@ -20,7 +20,9 @@ __externref_t emwgpuDeviceCreateRenderPipeline(WGPUDevice device, WGPURenderPipe
 
 __externref_t emwgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder commandEncoder, WGPURenderPassDescriptor const * descriptor, int * idOutPtr);
 
-void emwgpuRenderPassEncoderNoOp(__externref_t renderPassEncoder, uint32_t x);
+void emwgpuRenderPassEncoderNoOp_NoJS(__externref_t renderPassEncoder, uint32_t x);
+void emwgpuRenderPassEncoderNoOp_JSByExternref(__externref_t renderPassEncoder, uint32_t x);
+void emwgpuRenderPassEncoderNoOp_JSByIndex(WGPURenderPassEncoder renderPassEncoder, uint32_t x);
 void emwgpuRenderPassEncoderDraw(__externref_t renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 void emwgpuRenderPassEncoderSetPipeline(__externref_t renderPassEncoder, __externref_t renderPipeline);
 

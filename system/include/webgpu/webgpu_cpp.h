@@ -1051,7 +1051,9 @@ namespace wgpu {
         using ObjectBase::operator=;
 
         void BeginOcclusionQuery(uint32_t queryIndex) const;
-        void NoOp(uint32_t x) const;
+        void NoOp_NoJS(uint32_t x) const;
+        void NoOp_JSByExternref(uint32_t x) const;
+        void NoOp_JSByIndex(uint32_t x) const;
         void Draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t firstVertex = 0, uint32_t firstInstance = 0) const;
         void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1, uint32_t firstIndex = 0, int32_t baseVertex = 0, uint32_t firstInstance = 0) const;
         void DrawIndexedIndirect(Buffer const& indirectBuffer, uint64_t indirectOffset) const;
