@@ -2269,6 +2269,11 @@ var LibraryWebGPU = {
   emwgpuRenderPassEncoderNoOp_JSByIndex: (encoderId, x) => {
     WebGPU.mgrRenderPassEncoder.get(encoderId).noOp(x);
   },
+  emwgpuRenderPassEncoderMultiNoOp_JSByExternref: (encoder, times, x) => {
+    for (let i = 0; i < times; ++i) {
+      encoder.noOp(x);
+    }
+  },
   emwgpuRenderPassEncoderDraw: 'Function.prototype.call.bind(GPURenderPassEncoder.prototype.draw)',
   emwgpuRenderPassEncoderSetPipeline: 'Function.prototype.call.bind(GPURenderPassEncoder.prototype.setPipeline)',
   wgpuRenderPassEncoderDrawIndexed: (passId, indexCount, instanceCount, firstIndex, baseVertex, firstInstance) => {
