@@ -956,7 +956,7 @@ sigs = {
   emwgpuCommandEncoderBeginRenderPass__sig: 'eppp',
   emwgpuDeviceCreateRenderPipeline__sig: 'eppp',
   emwgpuRenderPassEncoderDraw__sig: 'veiiii',
-  emwgpuRenderPassEncoderMultiNoOp_JSByExternref__sig: 'veii',
+  emwgpuRenderPassEncoderMultiNoOp_LoopInJS_JSByExternref__sig: 'veii',
   emwgpuRenderPassEncoderNoOp_JSByExternref__sig: 'vei',
   emwgpuRenderPassEncoderNoOp_JSByIndex__sig: 'vpi',
   emwgpuRenderPassEncoderNoOp_NoJS__sig: 'vei',

@@ -108,9 +108,33 @@ void wgpuRenderPassEncoderNoOp_JSByExternref(WGPURenderPassEncoder renderPassEnc
 void wgpuRenderPassEncoderNoOp_JSByIndex(WGPURenderPassEncoder renderPassEncoder, uint32_t x) {
   emwgpuRenderPassEncoderNoOp_JSByIndex(renderPassEncoder, x);
 }
-void wgpuRenderPassEncoderMultiNoOp_JSByExternref(WGPURenderPassEncoder renderPassEncoder, uint32_t times, uint32_t x) {
+void wgpuRenderPassEncoderMultiNoOp_LoopInJS_JSByExternref(WGPURenderPassEncoder renderPassEncoder, uint32_t times, uint32_t x) {
   __externref_t pass = emwgpuTable_RenderPassEncoder_Get(renderPassEncoder);
-  emwgpuRenderPassEncoderMultiNoOp_JSByExternref(pass, times, x);
+  emwgpuRenderPassEncoderMultiNoOp_LoopInJS_JSByExternref(pass, times, x);
+}
+void wgpuRenderPassEncoderMultiNoOp_LoopInWasmManyLookup_NoJS(WGPURenderPassEncoder renderPassEncoder, uint32_t times, uint32_t x) {
+  for (uint32_t i = 0; i < times; ++i) {
+    __externref_t pass = emwgpuTable_RenderPassEncoder_Get(renderPassEncoder);
+    emwgpuRenderPassEncoderNoOp_NoJS(pass, x);
+  }
+}
+void wgpuRenderPassEncoderMultiNoOp_LoopInWasmManyLookup_JSByExternref(WGPURenderPassEncoder renderPassEncoder, uint32_t times, uint32_t x) {
+  for (uint32_t i = 0; i < times; ++i) {
+    __externref_t pass = emwgpuTable_RenderPassEncoder_Get(renderPassEncoder);
+    emwgpuRenderPassEncoderNoOp_JSByExternref(pass, x);
+  }
+}
+void wgpuRenderPassEncoderMultiNoOp_LoopInWasmSingleLookup_NoJS(WGPURenderPassEncoder renderPassEncoder, uint32_t times, uint32_t x) {
+  __externref_t pass = emwgpuTable_RenderPassEncoder_Get(renderPassEncoder);
+  for (uint32_t i = 0; i < times; ++i) {
+    emwgpuRenderPassEncoderNoOp_NoJS(pass, x);
+  }
+}
+void wgpuRenderPassEncoderMultiNoOp_LoopInWasmSingleLookup_JSByExternref(WGPURenderPassEncoder renderPassEncoder, uint32_t times, uint32_t x) {
+  __externref_t pass = emwgpuTable_RenderPassEncoder_Get(renderPassEncoder);
+  for (uint32_t i = 0; i < times; ++i) {
+    emwgpuRenderPassEncoderNoOp_JSByExternref(pass, x);
+  }
 }
 
 void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) {

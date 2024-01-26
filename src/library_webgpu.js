@@ -2269,7 +2269,7 @@ var LibraryWebGPU = {
   emwgpuRenderPassEncoderNoOp_JSByIndex: (encoderId, x) => {
     WebGPU.mgrRenderPassEncoder.get(encoderId).noOp(x);
   },
-  emwgpuRenderPassEncoderMultiNoOp_JSByExternref: (encoder, times, x) => {
+  emwgpuRenderPassEncoderMultiNoOp_LoopInJS_JSByExternref: (encoder, times, x) => {
     for (let i = 0; i < times; ++i) {
       encoder.noOp(x);
     }
