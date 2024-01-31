@@ -26,13 +26,26 @@
 // FIXME: It would be nice to export this for direct access from JS, but not
 // sure how. __attribute__((export_name(""))) is only allowed on functions
 EMSCRIPTEN_KEEPALIVE
+static __externref_t emwgpuTable_HEAPU32[0];
+EMSCRIPTEN_KEEPALIVE
 static __externref_t emwgpuTable_RenderPassEncoder[0];
 EMSCRIPTEN_KEEPALIVE
+static __externref_t emwgpuTable_BindGroup[0];
+EMSCRIPTEN_KEEPALIVE
 static __externref_t emwgpuTable_RenderPipeline[0];
+
+__externref_t emwgpuTable_HEAPU32_Get() {
+  return __builtin_wasm_table_get(emwgpuTable_HEAPU32, 0);
+}
 
 __externref_t emwgpuTable_RenderPassEncoder_Get(void* ptr_id) {
   uintptr_t id = reinterpret_cast<uintptr_t>(ptr_id);
   return __builtin_wasm_table_get(emwgpuTable_RenderPassEncoder, id);
+}
+
+__externref_t emwgpuTable_BindGroup_Get(void* ptr_id) {
+  uintptr_t id = reinterpret_cast<uintptr_t>(ptr_id);
+  return __builtin_wasm_table_get(emwgpuTable_BindGroup, id);
 }
 
 __externref_t emwgpuTable_RenderPipeline_Get(void* ptr_id) {
@@ -49,6 +62,12 @@ __externref_t emwgpuTable_RenderPipeline_Get(void* ptr_id) {
 
 WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor* descriptor) {
   assert(descriptor == nullptr); // descriptor not implemented yet
+
+  if (__builtin_wasm_table_size(emwgpuTable_HEAPU32) < 1) {
+    // FIXME: This assumes the heap will never be resized (invalidating HEAPU32)
+    __externref_t heapU32 = emwgpuGetHEAPU32();
+    __builtin_wasm_table_grow(emwgpuTable_HEAPU32, heapU32, 1);
+  }
   return reinterpret_cast<WGPUInstance>(1);
 }
 
@@ -58,6 +77,23 @@ void wgpuInstanceReference(WGPUInstance) { /* no-op for now */ }
 void wgpuInstanceRelease(WGPUInstance) { /* no-op for now */ }
 
 // Device
+
+WGPUBindGroup wgpuDeviceCreateBindGroup(WGPUDevice device, WGPUBindGroupDescriptor const * descriptor) {
+  int tableIndex = 0;
+  __externref_t obj = emwgpuDeviceCreateBindGroup(device, descriptor, &tableIndex);
+
+  int currentTableSize = __builtin_wasm_table_size(emwgpuTable_BindGroup);
+  if (tableIndex >= currentTableSize) {
+    int growSize = tableIndex + 1 - currentTableSize;
+    // We don't care what's in any of the other entries in the table so, out of
+    // laziness, just fill the table with garbage.
+    __builtin_wasm_table_grow(emwgpuTable_BindGroup, obj, growSize);
+  } else {
+    __builtin_wasm_table_set(emwgpuTable_BindGroup, tableIndex, obj);
+  }
+
+  return reinterpret_cast<WGPUBindGroup>(static_cast<uintptr_t>(tableIndex));
+}
 
 WGPURenderPipeline wgpuDeviceCreateRenderPipeline(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor) {
   int tableIndex = 0;
@@ -146,4 +182,23 @@ void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder renderPassEncoder, W
   __externref_t pass = emwgpuTable_RenderPassEncoder_Get(renderPassEncoder);
   __externref_t pipeline = emwgpuTable_RenderPipeline_Get(renderPassEncoder);
   emwgpuRenderPassEncoderSetPipeline(pass, pipeline);
+}
+
+void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPU_NULLABLE WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets) {
+  __externref_t pass = emwgpuTable_RenderPassEncoder_Get(renderPassEncoder);
+  if (group == nullptr) {
+    emwgpuRenderPassEncoderSetBindGroupWithoutOffsets(pass, groupIndex, __builtin_wasm_ref_null_extern());
+    return;
+  }
+
+  __externref_t bg = emwgpuTable_BindGroup_Get(group);
+  if (dynamicOffsetCount == 0) {
+    emwgpuRenderPassEncoderSetBindGroupWithoutOffsets(pass, groupIndex, bg);
+  } else {
+    __externref_t heapU32 = emwgpuTable_HEAPU32_Get();
+    uintptr_t dynamicOffsetsHeapOffset = reinterpret_cast<uintptr_t>(dynamicOffsets) >> 2;
+    static constexpr double MAX_SAFE_INTEGER = 9007199254740991.0;
+    assert(dynamicOffsetsHeapOffset < MAX_SAFE_INTEGER);
+    emwgpuRenderPassEncoderSetBindGroupWithOffsets(pass, groupIndex, bg, heapU32, dynamicOffsetsHeapOffset, dynamicOffsetCount);
+  }
 }

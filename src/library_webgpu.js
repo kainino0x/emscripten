@@ -178,6 +178,7 @@ var LibraryWebGPU = {
   emwgpu_console_log: (value) => {
     console.log('emwgpu_console_log:', value);
   },
+  emwgpuGetHEAPU32: () => HEAPU32,
 
   $WebGPU__postset: 'WebGPU.initManagers();',
   $WebGPU__deps: ['$withStackSave', '$stringToUTF8OnStack'],
@@ -1110,8 +1111,8 @@ var LibraryWebGPU = {
     return WebGPU.mgrBindGroupLayout.create(device["createBindGroupLayout"](desc));
   },
 
-  wgpuDeviceCreateBindGroup__deps: ['$readI53FromI64'],
-  wgpuDeviceCreateBindGroup: (deviceId, descriptor) => {
+  emwgpuDeviceCreateBindGroup__deps: ['$readI53FromI64'],
+  emwgpuDeviceCreateBindGroup: (deviceId, descriptor, idOutPtr) => {
     {{{ gpu.makeCheckDescriptor('descriptor') }}}
 
     function makeEntry(entryPtr) {
@@ -1173,7 +1174,10 @@ var LibraryWebGPU = {
     if (labelPtr) desc["label"] = UTF8ToString(labelPtr);
 
     var device = WebGPU.mgrDevice.get(deviceId);
-    return WebGPU.mgrBindGroup.create(device["createBindGroup"](desc));
+    var bindGroup = device["createBindGroup"](desc);
+    var id = WebGPU.mgrBindGroup.create(bindGroup);
+    {{{ makeSetValue('idOutPtr', 0, 'id', 'i32') }}};
+    return bindGroup;
   },
 
   wgpuDeviceCreatePipelineLayout: (deviceId, descriptor) => {
@@ -2224,15 +2228,6 @@ var LibraryWebGPU = {
     pass.label = UTF8ToString(labelPtr);
   },
 
-  wgpuRenderPassEncoderSetBindGroup: (passId, groupIndex, groupId, dynamicOffsetCount, dynamicOffsetsPtr) => {
-    var pass = WebGPU.mgrRenderPassEncoder.get(passId);
-    var group = WebGPU.mgrBindGroup.get(groupId);
-    if (dynamicOffsetCount == 0) {
-      pass["setBindGroup"](groupIndex, group);
-    } else {
-      pass["setBindGroup"](groupIndex, group, HEAPU32, {{{ getHeapOffset('dynamicOffsetsPtr', 'u32') }}}, dynamicOffsetCount);
-    }
-  },
   wgpuRenderPassEncoderSetBlendConstant: (passId, colorPtr) => {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     var color = WebGPU.makeColor(colorPtr);
@@ -2276,6 +2271,8 @@ var LibraryWebGPU = {
   },
   emwgpuRenderPassEncoderDraw: 'Function.prototype.call.bind(GPURenderPassEncoder.prototype.draw)',
   emwgpuRenderPassEncoderSetPipeline: 'Function.prototype.call.bind(GPURenderPassEncoder.prototype.setPipeline)',
+  emwgpuRenderPassEncoderSetBindGroupWithoutOffsets: 'Function.prototype.call.bind(GPURenderPassEncoder.prototype.setBindGroup)',
+  emwgpuRenderPassEncoderSetBindGroupWithOffsets: 'Function.prototype.call.bind(GPURenderPassEncoder.prototype.setBindGroup)',
   wgpuRenderPassEncoderDrawIndexed: (passId, indexCount, instanceCount, firstIndex, baseVertex, firstInstance) => {
     var pass = WebGPU.mgrRenderPassEncoder.get(passId);
     pass["drawIndexed"](indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
