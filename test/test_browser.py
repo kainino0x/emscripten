@@ -3309,6 +3309,16 @@ Module["preRun"] = () => {
       print(opts)
       self.btest_exit('async.cpp', cflags=['-O' + str(opts), '-g2'] + args)
 
+  @parameterized({
+    'asyncify': (['-sASYNCIFY=1'],),
+    'jspi': (['-sASYNCIFY=2', '-Wno-experimental'],),
+  })
+  def test_async_in_timeout(self, args):
+    if is_jspi(args) and not is_chrome():
+      self.skipTest(f'Current browser ({EMTEST_BROWSER}) does not support JSPI. Only chromium-based browsers ({CHROMIUM_BASED_BROWSERS}) support JSPI today.')
+
+    self.btest_exit('async_in_timeout.cpp', cflags=['-O0', '-g2'] + args)
+
   def test_asyncify_tricky_function_sig(self):
     self.btest('test_asyncify_tricky_function_sig.cpp', '85', cflags=['-sASYNCIFY_ONLY=[foo(char.const*?.int#),foo2(),main,__original_main]', '-sASYNCIFY'])
 
@@ -3336,11 +3346,15 @@ Module["preRun"] = () => {
     self.btest_exit('async_virtual_2.cpp', cflags=args + ['-sASSERTIONS', '-sSAFE_HEAP', '-profiling', '-sASYNCIFY'])
 
   @parameterized({
-    '': ([],),
+    'asyncify': (['-sASYNCIFY=1'],),
+    'jspi': (['-sASYNCIFY=2', '-Wno-experimental'],),
+  })
+  @parameterized({
+    '': (['-g', '-sASSERTIONS'],),
     'O3': (['-O3'],),
   })
-  def test_async_mainloop(self, args):
-    self.btest_exit('test_async_mainloop.c', cflags=args + ['-sASYNCIFY'])
+  def test_async_mainloop(self, args1, args2):
+    self.btest_exit('test_async_mainloop.c', cflags=args1 + args2)
 
   @requires_sound_hardware
   @parameterized({

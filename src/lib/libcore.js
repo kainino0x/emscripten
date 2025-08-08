@@ -1862,6 +1862,14 @@ addToLibrary({
     return func;
   },
 
+  $assertNotAsync__internal: true,
+  $assertNotAsync__deps: ['$wasmTable', '$getWasmTableEntry'],
+  $assertNotAsync: (funcPtr) => {
+    var func = wasmTable.get({{{ toIndexType('funcPtr') }}});
+    console.log('aaaa', funcPtr, getWasmTableEntry(funcPtr), wasmTable, func, Asyncify.isAsyncExport(func));
+    assert(!Asyncify.isAsyncExport(func), 'Under JSPI, this function does not accept async functions.');
+  },
+
 #else
 
   $setWasmTableEntry__docs: '/** @suppress{checkTypes} */',

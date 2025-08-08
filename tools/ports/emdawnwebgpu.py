@@ -3,6 +3,7 @@
 # University of Illinois/NCSA Open Source License.  Both these licenses can be
 # found in the LICENSE file.
 
+# https://dawn.googlesource.com/dawn/+/2748c19e00fd81ebf2bbed15fdcb65d561f0cd9b/src/emdawnwebgpu/pkg/README.md
 r"""
 # Emdawnwebgpu
 
@@ -13,6 +14,7 @@ and while it is maintained in Dawn, it works in any browser supporting WebGPU
 
 The package includes all of the necessary files to use
 `<webgpu/webgpu.h>` and the Dawn-style `<webgpu/webgpu_cpp.h>` with Emscripten.
+<!-- TODO(crbug.com/371024051): Link to a sample project. -->
 
 Find new versions of this package at <https://github.com/google/dawn/releases>.
 
@@ -67,13 +69,17 @@ Under `embuilder`, some options cannot be set automatically, so they must be
 set manually. See `OPTIONS` in `emdawnwebgpu.port.py` for details.
 """
 
-TAG = 'v20250531.224602'
+TAG = 'v20250710.204758'
 
 EXTERNAL_PORT = f'https://github.com/google/dawn/releases/download/{TAG}/emdawnwebgpu_pkg-{TAG}.zip'
-SHA512 = 'e3db5b2a4cc97cbb9b8a0c1f6fe7a740bf644322dfa4641a7b0902c192c58205d76acb9b359a0d6da1fdc9795e85eb1cf1927aa47f2a82814ee29868fef6670e'
+SHA512 = 'f233f6495280561fe0a20df918c7bb9913fa9c6db0c96e46ed2be6c54be38038929cb62c214a88bd10544f52a7f033d762a8619e9b60c00b68148e9b5ee1e63d'
 PORT_FILE = 'emdawnwebgpu_pkg/emdawnwebgpu.port.py'
 
 # Port information (required)
-URL = 'https://dawn.googlesource.com/dawn/+/refs/heads/main/src/emdawnwebgpu/'
-DESCRIPTION = "Emdawnwebgpu is a fork of Emscripten's original USE_WEBGPU, implementing a newer, more stable version of the standardized webgpu.h interface."
+
+# - Visible in emcc --show-ports and emcc --use-port=emdawnwebgpu:help
 LICENSE = "Some files: BSD 3-Clause License. Other files: Emscripten's license (available under both MIT License and University of Illinois/NCSA Open Source License)"
+
+# - Visible in emcc --use-port=emdawnwebgpu:help
+DESCRIPTION = "Emdawnwebgpu implements webgpu.h on WebGPU, replacing -sUSE_WEBGPU. **For info on usage and filing feedback, see link below.**"
+URL = 'https://dawn.googlesource.com/dawn/+/2748c19e00fd81ebf2bbed15fdcb65d561f0cd9b/src/emdawnwebgpu/pkg/README.md'

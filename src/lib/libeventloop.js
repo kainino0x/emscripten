@@ -375,8 +375,12 @@ LibraryJSEventLoop = {
     return 0;
   },
 
-  emscripten_set_main_loop__deps: ['$setMainLoop'],
+  emscripten_set_main_loop__deps: ['$setMainLoop', '$assertNotAsync'],
   emscripten_set_main_loop: (func, fps, simulateInfiniteLoop) => {
+#if ASYNCIFY == 2 && ASSERTIONS
+    assertNotAsync(func);
+#endif
+    console.log(func, getWasmTableEntry(func));
     var iterFunc = {{{ makeDynCall('v', 'func') }}};
     setMainLoop(iterFunc, fps, simulateInfiniteLoop);
   },
